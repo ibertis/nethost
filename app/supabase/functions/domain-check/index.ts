@@ -12,16 +12,24 @@ serve(async (req) => {
     const { domain } = await req.json();
     if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { status: 400, headers: CORS });
 
-    // RDAP is a public standard protocol — no API key or IP whitelist required.
-    // 404 = domain not registered (available), 200 = domain registered (taken).
-    const rdapRes = await fetch(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
-    const available = rdapRes.status === 404;
+    const uid = Deno.env.get('ENOM_USER')!;
+    const pw  = Deno.env.get('ENOM_PASS')!;
 
-    const namePart = domain.split('.')[0];
+    const dotIndex = domain.indexOf('.');
+    const sld = domain.slice(0, dotIndex);
+    const tld = domain.slice(dotIndex + 1);
+
+    const url = `https://reseller.enom.com/interface.asp?command=Check&sld=${encodeURIComponent(sld)}&tld=${encodeURIComponent(tld)}&uid=${encodeURIComponent(uid)}&pw=${encodeURIComponent(pw)}&responsetype=json`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // RRPCode 210 = available, 211 = not available
+    const available = String(data.RRPCode) === '210';
+
     const alternatives = available ? [] : [
-      `${namePart}.co`,
-      `${namePart}.net`,
-      `${namePart}.io`,
+      `${sld}.co`,
+      `${sld}.net`,
+      `${sld}.io`,
     ].filter((a) => a !== domain);
 
     return new Response(
