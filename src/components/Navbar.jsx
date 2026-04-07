@@ -52,7 +52,7 @@ export default function Navbar() {
         {/* CTA + mobile toggle */}
         <div className="flex items-center gap-3">
           <a
-            href="mailto:hello@nethost.co"
+            href="https://app.nethost.co"
             className="hidden md:inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full hover:opacity-90 transition"
           >
             Start a Project
@@ -81,7 +81,7 @@ export default function Navbar() {
             </a>
           ))}
           <a
-            href="mailto:hello@nethost.co"
+            href="https://app.nethost.co"
             className="inline-flex items-center justify-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition"
           >
             Start a Project
