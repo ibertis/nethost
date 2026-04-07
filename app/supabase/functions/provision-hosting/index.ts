@@ -71,43 +71,68 @@ async function provisionCloudways(domain: string, siteName: string) {
   };
 }
 
-// --- cPanel WHM provisioning (Starter plan) ---
-async function provisionWHM(domain: string) {
-  const whmHost = Deno.env.get('WHM_HOST')!;
-  const whmToken = Deno.env.get('WHM_API_TOKEN')!;
+// --- CyberPanel provisioning (Starter plan) ---
+async function provisionCyberPanel(domain: string) {
+  const cpUrl  = Deno.env.get('CYBERPANEL_URL')!;  // e.g. https://76.13.118.227:8090
+  const cpUser = Deno.env.get('CYBERPANEL_USER') ?? 'admin';
+  const cpPass = Deno.env.get('CYBERPANEL_PASS')!;
 
-  const username = domain.replace(/[^a-z0-9]/g, '').slice(0, 8) + Math.floor(Math.random() * 100);
-  const password = generatePassword();
+  const websiteOwner = domain.replace(/[^a-z0-9]/g, '').slice(0, 8) + Math.floor(Math.random() * 100);
+  const ownerPassword = generatePassword();
+  const wpPassword = generatePassword();
+  const ownerEmail = `hello@${domain}`;
 
-  const params = new URLSearchParams({
-    username,
-    domain,
-    password,
-    plan: 'default',
-    contactemail: `hello@${domain}`,
+  // @ts-ignore — Deno-specific, bypasses self-signed cert on CyberPanel
+  const httpClient = Deno.createHttpClient({ rejectUnauthorized: false });
+
+  // Step 1: Create website
+  const createRes = await fetch(`${cpUrl}/api/createWebsite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      adminUser: cpUser,
+      adminPass: cpPass,
+      domainName: domain,
+      ownerEmail,
+      websiteOwner,
+      ownerPassword,
+      packageName: 'Default',
+    }),
+    // @ts-ignore
+    client: httpClient,
   });
+  const createData = await createRes.json();
+  if (createData.errorMessage && createData.errorMessage !== 'None') {
+    throw new Error(`CyberPanel createWebsite failed: ${createData.errorMessage}`);
+  }
 
-  const res = await fetch(
-    `https://${whmHost}:2087/json-api/createacct?${params}`,
-    {
-      headers: {
-        'Authorization': `whm root:${whmToken}`,
-      },
-    },
-  );
-
-  const data = await res.json();
-  const result = data?.result?.[0];
-  if (!result?.status) {
-    throw new Error(result?.statusmsg ?? 'cPanel account creation failed');
+  // Step 2: Install WordPress
+  const wpRes = await fetch(`${cpUrl}/api/installWordPress`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      adminUser: cpUser,
+      adminPass: cpPass,
+      domainName: domain,
+      title: domain,
+      adminEmail: ownerEmail,
+      wploginUser: 'admin',
+      wploginPass: wpPassword,
+      wpType: '1',
+    }),
+    // @ts-ignore
+    client: httpClient,
+  });
+  const wpData = await wpRes.json();
+  if (wpData.errorMessage && wpData.errorMessage !== 'None') {
+    throw new Error(`CyberPanel installWordPress failed: ${wpData.errorMessage}`);
   }
 
   return {
     wpAdminUrl: `https://${domain}/wp-admin`,
-    username,
-    password,
-    email: `hello@${domain}`,
-    cpanelUrl: `https://${whmHost}:2083`,
+    username: 'admin',
+    password: wpPassword,
+    email: ownerEmail,
   };
 }
 
@@ -123,7 +148,7 @@ serve(async (req) => {
 
     let result;
     if (plan === 'Starter') {
-      result = await provisionWHM(domain);
+      result = await provisionCyberPanel(domain);
     } else {
       // Business or Pro → Cloudways
       result = await provisionCloudways(domain, siteName ?? domain);
