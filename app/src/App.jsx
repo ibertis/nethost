@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { WizardProvider, useWizard } from './context/WizardContext';
 import WizardShell from './components/WizardShell';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import Step1Plan from './components/steps/Step1Plan';
 import Step2Domain from './components/steps/Step2Domain';
 import Step3SiteType from './components/steps/Step3SiteType';
@@ -34,6 +36,7 @@ function WizardContent() {
 
 function AppGate() {
   const { isAuthenticated, isLoadingAuth } = useAuth();
+  const [view, setView] = useState('wizard'); // 'wizard' | 'dashboard'
 
   if (isLoadingAuth) {
     return (
@@ -45,8 +48,12 @@ function AppGate() {
 
   if (!isAuthenticated) return <Login />;
 
+  if (view === 'dashboard') {
+    return <Dashboard onNewSite={() => setView('wizard')} />;
+  }
+
   return (
-    <WizardProvider>
+    <WizardProvider onGoToDashboard={() => setView('dashboard')}>
       <WizardContent />
     </WizardProvider>
   );

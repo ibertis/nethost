@@ -64,16 +64,30 @@ export default function Step7Provisioning() {
           complete(i);
         }
 
+        const provisionedCredentials = {
+          domain:     data.domain,
+          wpAdminUrl: creds.wpAdminUrl ?? `https://${data.domain}/wp-admin`,
+          username:   creds.username ?? 'admin',
+          password:   creds.password,
+          email:      creds.email ?? `hello@${data.domain}`,
+        };
+
         // Store real credentials in wizard state
-        update({
-          provisionedCredentials: {
-            domain:     data.domain,
-            wpAdminUrl: creds.wpAdminUrl ?? `https://${data.domain}/wp-admin`,
-            username:   creds.username ?? 'admin',
-            password:   creds.password,
-            email:      creds.email ?? `hello@${data.domain}`,
-          },
-        });
+        update({ provisionedCredentials });
+
+        // Persist order to Supabase for dashboard
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('orders').insert({
+            user_id:     user.id,
+            plan:        data.plan,
+            domain:      provisionedCredentials.domain,
+            wp_admin_url: provisionedCredentials.wpAdminUrl,
+            username:    provisionedCredentials.username,
+            password:    provisionedCredentials.password,
+            email:       provisionedCredentials.email,
+          });
+        }
 
         await delay(600);
         setStep(8);

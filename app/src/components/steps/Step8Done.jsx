@@ -51,7 +51,7 @@ function CredRow({ label, value, mono }) {
 }
 
 export default function Step8Done() {
-  const { data } = useWizard();
+  const { data, goToDashboard } = useWizard();
   const [show, setShow] = useState(false);
 
   const creds = data.provisionedCredentials;
@@ -130,7 +130,10 @@ export default function Step8Done() {
         >
           Visit Your Website <ExternalLink size={14} />
         </a>
-        <button className="flex-1 inline-flex items-center justify-center gap-2 bg-white/[0.05] border border-white/10 text-slate-300 text-sm font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition">
+        <button
+          onClick={goToDashboard}
+          className="flex-1 inline-flex items-center justify-center gap-2 bg-white/[0.05] border border-white/10 text-slate-300 text-sm font-semibold px-6 py-3 rounded-xl hover:bg-white/10 transition"
+        >
           <LayoutDashboard size={14} /> Go to Dashboard
         </button>
       </div>

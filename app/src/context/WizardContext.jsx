@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from 'react';
 
 const WizardContext = createContext(null);
 
-export function WizardProvider({ children }) {
+export function WizardProvider({ children, onGoToDashboard }) {
   const [step, setStep] = useState(1);
   const [data, setData] = useState({
     plan: 'Business',
@@ -30,8 +30,10 @@ export function WizardProvider({ children }) {
     return true;
   };
 
+  const goToDashboard = onGoToDashboard ?? (() => {});
+
   return (
-    <WizardContext.Provider value={{ step, setStep, data, update, updateIdentity, canAdvance }}>
+    <WizardContext.Provider value={{ step, setStep, data, update, updateIdentity, canAdvance, goToDashboard }}>
       {children}
     </WizardContext.Provider>
   );
