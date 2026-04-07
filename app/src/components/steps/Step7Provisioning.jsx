@@ -87,6 +87,18 @@ export default function Step7Provisioning() {
             password:    provisionedCredentials.password,
             email:       provisionedCredentials.email,
           });
+
+          // Fire-and-forget confirmation email — don't block on failure
+          supabase.functions.invoke('send-order-confirmation', {
+            body: {
+              to:         user.email,
+              domain:     provisionedCredentials.domain,
+              plan:       data.plan,
+              wpAdminUrl: provisionedCredentials.wpAdminUrl,
+              username:   provisionedCredentials.username,
+              password:   provisionedCredentials.password,
+            },
+          });
         }
 
         await delay(600);
