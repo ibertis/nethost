@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: #050914;
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { min-height: 100vh; }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .card-select {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .card-select:hover {
+    transform: translateY(-2px);
+  }
+  .card-select.selected {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 1px #0ea5e9, 0 0 24px rgba(14,165,233,0.15);
+  }
+  .input-field {
+    @apply w-full bg-white/[0.05] border border-white/[0.09] text-white placeholder-slate-600 rounded-xl px-4 py-3 text-sm outline-none transition;
+  }
+  .input-field:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+  }
+}
