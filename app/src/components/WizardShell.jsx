@@ -35,6 +35,12 @@ export default function WizardShell({ children }) {
               Step {step} of 6
             </span>
           )}
+          <a
+            href="mailto:hello@nethost.co"
+            className="text-slate-600 hover:text-slate-400 transition text-xs hidden sm:inline"
+          >
+            Support
+          </a>
           <button
             onClick={logout}
             title="Sign out"

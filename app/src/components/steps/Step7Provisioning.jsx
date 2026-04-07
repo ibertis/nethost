@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -27,35 +27,51 @@ export default function Step7Provisioning() {
   const [error, setError] = useState('');
   const [retryKey, setRetryKey] = useState(0);
 
-  const complete = (idx) => setCompleted((prev) => [...prev, idx]);
+  // Persists across retries (retryKey increments but ref is stable for component lifetime)
+  const completedTasksRef = useRef(new Set());
+
+  const complete = (idx) => {
+    completedTasksRef.current.add(idx);
+    setCompleted((prev) => [...prev, idx]);
+  };
 
   useEffect(() => {
     const run = async () => {
       try {
-        // Task 0 — Register domain
+        // Task 0 — Register domain (skip if already completed on a prior attempt)
         setActive(0);
-        const [registerResult] = await Promise.all([
-          supabase.functions.invoke('domain-register', { body: { domain: data.domain } }),
-          delay(MIN_TASK_MS),
-        ]);
-        if (registerResult.error || registerResult.data?.error) {
-          throw new Error(registerResult.data?.error ?? registerResult.error?.message ?? 'Domain registration failed');
+        if (!completedTasksRef.current.has(0)) {
+          const [registerResult] = await Promise.all([
+            supabase.functions.invoke('domain-register', { body: { domain: data.domain } }),
+            delay(MIN_TASK_MS),
+          ]);
+          if (registerResult.error || registerResult.data?.error) {
+            throw new Error(registerResult.data?.error ?? registerResult.error?.message ?? 'Domain registration failed');
+          }
+        } else {
+          await delay(MIN_TASK_MS);
         }
         complete(0);
 
-        // Task 1 — Set up hosting (the heavy call — also covers tasks 2–4 visually)
+        // Task 1 — Set up hosting (skip if already completed on a prior attempt)
         setActive(1);
-        const [provisionResult] = await Promise.all([
-          supabase.functions.invoke('provision-hosting', {
-            body: { plan: data.plan, domain: data.domain, siteName: data.identity?.name || data.domain },
-          }),
-          delay(MIN_TASK_MS),
-        ]);
-        if (provisionResult.error || provisionResult.data?.error) {
-          throw new Error(provisionResult.data?.error ?? provisionResult.error?.message ?? 'Hosting provisioning failed');
+        let creds;
+        if (!completedTasksRef.current.has(1)) {
+          const [provisionResult] = await Promise.all([
+            supabase.functions.invoke('provision-hosting', {
+              body: { plan: data.plan, domain: data.domain, siteName: data.identity?.name || data.domain },
+            }),
+            delay(MIN_TASK_MS),
+          ]);
+          if (provisionResult.error || provisionResult.data?.error) {
+            throw new Error(provisionResult.data?.error ?? provisionResult.error?.message ?? 'Hosting provisioning failed');
+          }
+          creds = provisionResult.data;
+        } else {
+          await delay(MIN_TASK_MS);
+          creds = {}; // already stored in provisionedCredentials below
         }
         complete(1);
-        const creds = provisionResult.data;
 
         // Tasks 2–6 — Visual steps while hosting finishes configuring
         for (let i = 2; i < TASKS.length; i++) {
@@ -79,13 +95,14 @@ export default function Step7Provisioning() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await supabase.from('orders').insert({
-            user_id:     user.id,
-            plan:        data.plan,
-            domain:      provisionedCredentials.domain,
-            wp_admin_url: provisionedCredentials.wpAdminUrl,
-            username:    provisionedCredentials.username,
-            password:    provisionedCredentials.password,
-            email:       provisionedCredentials.email,
+            user_id:            user.id,
+            plan:               data.plan,
+            domain:             provisionedCredentials.domain,
+            wp_admin_url:       provisionedCredentials.wpAdminUrl,
+            username:           provisionedCredentials.username,
+            password:           provisionedCredentials.password,
+            email:              provisionedCredentials.email,
+            stripe_customer_id: data.stripeCustomerId ?? null,
           });
 
           // Fire-and-forget confirmation email — don't block on failure
@@ -124,7 +141,13 @@ export default function Step7Provisioning() {
           Need help? Email <a href="mailto:hello@nethost.co" className="text-cyan-500 hover:text-cyan-400 transition">hello@nethost.co</a> or call <a href="tel:+18668076242" className="text-cyan-500 hover:text-cyan-400 transition">(866) 807-6242</a>
         </p>
         <button
-          onClick={() => { setError(''); setCompleted([]); setActive(0); setRetryKey((k) => k + 1); }}
+          onClick={() => {
+            setError('');
+            // Restore visual completed state from ref (tasks already done are re-shown as done)
+            setCompleted([...completedTasksRef.current]);
+            setActive(0);
+            setRetryKey((k) => k + 1);
+          }}
           className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:opacity-90 transition"
         >
           Try Again

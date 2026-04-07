@@ -150,6 +150,10 @@ export default function Login() {
 
         <p className="text-center text-xs text-slate-700 mt-6">
           <a href="https://nethost.co" className="hover:text-slate-500 transition">← Back to nethost.co</a>
+          <span className="mx-2">·</span>
+          <a href="https://nethost.co/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition">Terms</a>
+          <span className="mx-2">·</span>
+          <a href="https://nethost.co/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition">Privacy</a>
         </p>
       </div>
     </div>

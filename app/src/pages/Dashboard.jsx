@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, Plus, LogOut } from 'lucide-react';
+import { Copy, ExternalLink, Plus, LogOut, User } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
@@ -69,10 +69,19 @@ function SiteCard({ order }) {
   );
 }
 
-export default function Dashboard({ onNewSite }) {
+export default function Dashboard({ onNewSite, onAccount }) {
   const { logout } = useAuth();
   const [orders, setOrders]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  async function handleManageBilling() {
+    setBillingLoading(true);
+    const { data, error } = await supabase.functions.invoke('create-portal-session');
+    setBillingLoading(false);
+    if (error || !data?.url) return;
+    window.location.href = data.url;
+  }
 
   useEffect(() => {
     const fetch = async () => {
@@ -99,6 +108,26 @@ export default function Dashboard({ onNewSite }) {
             className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition"
           >
             <Plus size={13} /> Launch Another Site
+          </button>
+          <button
+            onClick={handleManageBilling}
+            disabled={billingLoading}
+            className="text-slate-500 hover:text-slate-300 transition text-xs hidden sm:inline disabled:opacity-50"
+          >
+            {billingLoading ? 'Loading…' : 'Billing'}
+          </button>
+          <a
+            href="mailto:hello@nethost.co"
+            className="text-slate-600 hover:text-slate-400 transition text-xs hidden sm:inline"
+          >
+            Support
+          </a>
+          <button
+            onClick={onAccount}
+            title="Account"
+            className="flex items-center gap-1.5 text-slate-600 hover:text-slate-400 transition text-xs"
+          >
+            <User size={14} />
           </button>
           <button
             onClick={logout}
@@ -138,6 +167,16 @@ export default function Dashboard({ onNewSite }) {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-white/[0.05] py-5 text-center">
+        <p className="text-slate-700 text-xs">
+          <a href="https://nethost.co/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition">Terms</a>
+          <span className="mx-2">·</span>
+          <a href="https://nethost.co/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-500 transition">Privacy</a>
+          <span className="mx-2">·</span>
+          <a href="mailto:hello@nethost.co" className="hover:text-slate-500 transition">hello@nethost.co</a>
+        </p>
+      </footer>
     </div>
   );
 }

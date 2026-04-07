@@ -38,7 +38,7 @@ function Row({ icon: Icon, label, value }) {
 function PaymentForm({ price }) {
   const stripe     = useStripe();
   const elements   = useElements();
-  const { data, setStep } = useWizard();
+  const { data, setStep, update } = useWizard();
   const [paying, setPaying]   = useState(false);
   const [cardError, setCardError] = useState('');
 
@@ -50,13 +50,21 @@ function PaymentForm({ price }) {
     setCardError('');
 
     try {
-      // 1. Create PaymentIntent server-side
+      // 0. Get user email to attach to Stripe Customer
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // 1. Create PaymentIntent server-side (also creates/retrieves Stripe Customer)
       const { data: intentData, error: intentError } = await supabase.functions.invoke(
         'create-payment-intent',
-        { body: { plan: data.plan } },
+        { body: { plan: data.plan, email: user?.email } },
       );
       if (intentError || intentData?.error) {
         throw new Error(intentData?.error ?? intentError?.message ?? 'Payment setup failed');
+      }
+
+      // Store customerId in wizard state for use in Step 7 orders insert
+      if (intentData.customerId) {
+        update({ stripeCustomerId: intentData.customerId });
       }
 
       // 2. Confirm card payment client-side

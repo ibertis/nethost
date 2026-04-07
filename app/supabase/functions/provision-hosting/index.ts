@@ -17,6 +17,27 @@ function generatePassword(length = 16): string {
   return pass;
 }
 
+// --- DNS: set A record via Enom after provisioning ---
+async function setDnsRecords(domain: string, ip: string): Promise<void> {
+  const uid = Deno.env.get('ENOM_USER')!;
+  const pw  = Deno.env.get('ENOM_PASS')!;
+  const dotIndex = domain.indexOf('.');
+  const sld = domain.slice(0, dotIndex);
+  const tld = domain.slice(dotIndex + 1);
+
+  const params = new URLSearchParams({
+    command: 'SetHosts', uid, pw, SLD: sld, TLD: tld, responsetype: 'json',
+    HostName1: '@',   RecordType1: 'A', Address1: ip, TTL1: '300',
+    HostName2: 'www', RecordType2: 'A', Address2: ip, TTL2: '300',
+  });
+  // Fire-and-forget — DNS propagation is async; don't throw on failure
+  await fetch('https://reseller.enom.com/interface.asp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  }).catch(() => {/* ignore */});
+}
+
 // --- Cloudways provisioning (Business / Pro plans) ---
 async function provisionCloudways(domain: string, siteName: string) {
   const email  = Deno.env.get('CLOUDWAYS_EMAIL')!;
@@ -60,6 +81,8 @@ async function provisionCloudways(domain: string, siteName: string) {
 
   const appId   = appData.app.id;
   const serverIp = server.public_ip ?? server.master_ip;
+
+  await setDnsRecords(domain, serverIp);
 
   return {
     wpAdminUrl: `https://${domain}/wp-admin`,
@@ -127,6 +150,9 @@ async function provisionCyberPanel(domain: string) {
   if (wpData.errorMessage && wpData.errorMessage !== 'None') {
     throw new Error(`CyberPanel installWordPress failed: ${wpData.errorMessage}`);
   }
+
+  const serverIp = new URL(cpUrl).hostname;
+  await setDnsRecords(domain, serverIp);
 
   return {
     wpAdminUrl: `https://${domain}/wp-admin`,
