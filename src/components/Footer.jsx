@@ -91,7 +91,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-white/[0.05] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-slate-600 text-xs">© 2025 NETHOST. All rights reserved.</p>
+          <p className="text-slate-600 text-xs">© 2026 NETHOST. All rights reserved.</p>
           <p className="text-slate-700 text-xs">
             Professional web hosting & digital services.
           </p>
