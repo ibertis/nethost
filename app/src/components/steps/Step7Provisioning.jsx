@@ -1,40 +1,111 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
+import { supabase } from '../../lib/supabaseClient';
 
 const TASKS = [
-  { label: 'Registering domain',           duration: 900 },
-  { label: 'Setting up hosting environment', duration: 1300 },
-  { label: 'Configuring SSL certificate',   duration: 1000 },
-  { label: 'Installing WordPress',          duration: 1600 },
-  { label: 'Setting up business email',     duration: 900 },
-  { label: 'Configuring CDN',               duration: 800 },
-  { label: 'Running final checks',          duration: 1100 },
+  { label: 'Registering domain' },
+  { label: 'Setting up hosting environment' },
+  { label: 'Configuring SSL certificate' },
+  { label: 'Installing WordPress' },
+  { label: 'Setting up business email' },
+  { label: 'Configuring CDN' },
+  { label: 'Running final checks' },
 ];
 
+// Minimum display duration per task (ms) so the animation feels intentional
+const MIN_TASK_MS = 800;
+
+async function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export default function Step7Provisioning() {
-  const { setStep, data } = useWizard();
-  const [completed, setCompleted] = useState([]);   // indices done
-  const [active, setActive] = useState(0);          // current running index
+  const { setStep, data, update } = useWizard();
+  const [completed, setCompleted] = useState([]);
+  const [active, setActive] = useState(0);
+  const [error, setError] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
+
+  const complete = (idx) => setCompleted((prev) => [...prev, idx]);
 
   useEffect(() => {
-    let idx = 0;
-    const run = () => {
-      if (idx >= TASKS.length) {
-        setTimeout(() => setStep(8), 600);
-        return;
+    const run = async () => {
+      try {
+        // Task 0 — Register domain
+        setActive(0);
+        const [registerResult] = await Promise.all([
+          supabase.functions.invoke('domain-register', { body: { domain: data.domain } }),
+          delay(MIN_TASK_MS),
+        ]);
+        if (registerResult.error || registerResult.data?.error) {
+          throw new Error(registerResult.data?.error ?? registerResult.error?.message ?? 'Domain registration failed');
+        }
+        complete(0);
+
+        // Task 1 — Set up hosting (the heavy call — also covers tasks 2–4 visually)
+        setActive(1);
+        const [provisionResult] = await Promise.all([
+          supabase.functions.invoke('provision-hosting', {
+            body: { plan: data.plan, domain: data.domain, siteName: data.identity?.name || data.domain },
+          }),
+          delay(MIN_TASK_MS),
+        ]);
+        if (provisionResult.error || provisionResult.data?.error) {
+          throw new Error(provisionResult.data?.error ?? provisionResult.error?.message ?? 'Hosting provisioning failed');
+        }
+        complete(1);
+        const creds = provisionResult.data;
+
+        // Tasks 2–6 — Visual steps while hosting finishes configuring
+        for (let i = 2; i < TASKS.length; i++) {
+          setActive(i);
+          await delay(MIN_TASK_MS);
+          complete(i);
+        }
+
+        // Store real credentials in wizard state
+        update({
+          provisionedCredentials: {
+            domain:     data.domain,
+            wpAdminUrl: creds.wpAdminUrl ?? `https://${data.domain}/wp-admin`,
+            username:   creds.username ?? 'admin',
+            password:   creds.password,
+            email:      creds.email ?? `hello@${data.domain}`,
+          },
+        });
+
+        await delay(600);
+        setStep(8);
+      } catch (err) {
+        setError(err.message ?? 'Something went wrong. Please try again.');
       }
-      setActive(idx);
-      setTimeout(() => {
-        setCompleted((prev) => [...prev, idx]);
-        idx++;
-        run();
-      }, TASKS[idx].duration);
     };
     run();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [retryKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const progress = Math.round((completed.length / TASKS.length) * 100);
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
+          <AlertCircle size={24} className="text-red-400" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Provisioning Failed</h2>
+        <p className="text-slate-400 text-sm max-w-sm mb-6">{error}</p>
+        <p className="text-slate-500 text-xs mb-6">
+          Need help? Email <a href="mailto:hello@nethost.co" className="text-cyan-500 hover:text-cyan-400 transition">hello@nethost.co</a> or call <a href="tel:+18668076242" className="text-cyan-500 hover:text-cyan-400 transition">(866) 807-6242</a>
+        </p>
+        <button
+          onClick={() => { setError(''); setCompleted([]); setActive(0); setRetryKey((k) => k + 1); }}
+          className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:opacity-90 transition"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">

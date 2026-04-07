@@ -13,6 +13,7 @@ export function WizardProvider({ children }) {
     siteType: '',
     template: '',
     identity: { name: '', tagline: '', logoUrl: '', color: '#0ea5e9' },
+    provisionedCredentials: null, // set after Step 7 completes
   });
 
   const update = (patch) => setData((prev) => ({ ...prev, ...patch }));

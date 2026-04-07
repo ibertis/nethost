@@ -1,14 +1,9 @@
 import { useState } from 'react';
 import { Search, CheckCircle2, XCircle, Globe, ChevronDown } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
+import { supabase } from '../../lib/supabaseClient';
 
 const TLDS = ['.com', '.co', '.net', '.io', '.org', '.app'];
-
-const ALTERNATIVES = (name) => [
-  { domain: `${name}.co`, available: true },
-  { domain: `get${name}.com`, available: true },
-  { domain: `${name}hq.com`, available: true },
-];
 
 export default function Step2Domain() {
   const { data, update } = useWizard();
@@ -16,6 +11,8 @@ export default function Step2Domain() {
   const [tld, setTld] = useState(data.tld || '.com');
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState(null); // null | 'available' | 'taken'
+  const [alternatives, setAlternatives] = useState([]);
+  const [checkError, setCheckError] = useState('');
   const [tldOpen, setTldOpen] = useState(false);
   const [existingDomain, setExistingDomain] = useState('');
 
@@ -23,11 +20,20 @@ export default function Step2Domain() {
     if (!input.trim()) return;
     setChecking(true);
     setResult(null);
-    await new Promise((r) => setTimeout(r, 1200));
-    // Simulate: domains containing 'taken' are taken, rest are available
-    const available = !input.toLowerCase().includes('taken');
+    setCheckError('');
+    const domain = `${input.trim()}${tld}`;
+    const { data, error } = await supabase.functions.invoke('domain-check', {
+      body: { domain },
+    });
+    if (error || data?.error) {
+      setCheckError(error?.message ?? data?.error ?? 'Check failed. Try again.');
+      setChecking(false);
+      return;
+    }
+    const available = data.available;
+    setAlternatives(data.alternatives ?? []);
     setResult(available ? 'available' : 'taken');
-    if (available) update({ domain: `${input.trim()}${tld}`, tld, domainAvailable: true });
+    if (available) update({ domain, tld, domainAvailable: true });
     setChecking(false);
   };
 
@@ -119,25 +125,42 @@ export default function Step2Domain() {
                 </div>
               </div>
             )}
+            {checkError && (
+              <div className="animate-[fade-up_0.3s_ease_forwards] bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-4 text-sm text-red-400">
+                {checkError}
+              </div>
+            )}
             {result === 'taken' && (
               <div className="animate-[fade-up_0.3s_ease_forwards]">
                 <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4">
                   <XCircle size={16} className="text-red-400 shrink-0" />
                   <span className="text-red-300 text-sm font-semibold">{input}{tld} is taken.</span>
                 </div>
-                <p className="text-slate-500 text-xs mb-2 font-medium">Alternatives available:</p>
-                <div className="flex flex-col gap-2">
-                  {ALTERNATIVES(input).map((alt) => (
-                    <button
-                      key={alt.domain}
-                      onClick={() => { update({ domain: alt.domain, domainAvailable: true }); setResult('available'); setInput(alt.domain.split('.')[0]); setTld('.' + alt.domain.split('.').slice(1).join('.')); }}
-                      className="flex items-center justify-between bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-2.5 hover:border-cyan-500/40 transition"
-                    >
-                      <span className="text-slate-200 text-sm">{alt.domain}</span>
-                      <span className="text-cyan-400 text-xs font-semibold">Select →</span>
-                    </button>
-                  ))}
-                </div>
+                {alternatives.length > 0 && (
+                  <>
+                    <p className="text-slate-500 text-xs mb-2 font-medium">Alternatives available:</p>
+                    <div className="flex flex-col gap-2">
+                      {alternatives.map((altDomain) => (
+                        <button
+                          key={altDomain}
+                          onClick={() => {
+                            const parts = altDomain.split('.');
+                            const altName = parts[0];
+                            const altTld = '.' + parts.slice(1).join('.');
+                            update({ domain: altDomain, tld: altTld, domainAvailable: true });
+                            setResult('available');
+                            setInput(altName);
+                            setTld(altTld);
+                          }}
+                          className="flex items-center justify-between bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-2.5 hover:border-cyan-500/40 transition"
+                        >
+                          <span className="text-slate-200 text-sm">{altDomain}</span>
+                          <span className="text-cyan-400 text-xs font-semibold">Select →</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

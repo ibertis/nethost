@@ -53,7 +53,13 @@ function CredRow({ label, value, mono }) {
 export default function Step8Done() {
   const { data } = useWizard();
   const [show, setShow] = useState(false);
-  const domain = data.domain || 'yourdomain.com';
+
+  const creds = data.provisionedCredentials;
+  const domain      = creds?.domain      ?? data.domain ?? 'yourdomain.com';
+  const wpAdminUrl  = creds?.wpAdminUrl  ?? `https://${domain}/wp-admin`;
+  const username    = creds?.username    ?? 'admin';
+  const password    = creds?.password    ?? 'Nh#9mX2kP!';
+  const email       = creds?.email       ?? `hello@${domain}`;
 
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 100);
@@ -108,10 +114,10 @@ export default function Step8Done() {
       <div className="w-full max-w-sm bg-gradient-to-b from-white/[0.05] to-white/[0.02] border border-white/[0.09] rounded-2xl p-5 mb-8 text-left shadow-[0_0_40px_rgba(14,165,233,0.08)]">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1">Your Credentials</p>
         <CredRow label="Website URL"        value={`https://${domain}`} />
-        <CredRow label="WordPress Admin"    value={`https://${domain}/wp-admin`} />
-        <CredRow label="Admin Username"     value="admin" mono />
-        <CredRow label="Temporary Password" value="Nh#9mX2kP!" mono />
-        <CredRow label="Business Email"     value={`hello@${domain}`} />
+        <CredRow label="WordPress Admin"    value={wpAdminUrl} />
+        <CredRow label="Admin Username"     value={username} mono />
+        <CredRow label="Temporary Password" value={password} mono />
+        <CredRow label="Business Email"     value={email} />
       </div>
 
       {/* CTAs */}
