@@ -19,7 +19,8 @@ export default function WizardShell({ children }) {
 
   const isProvisioning = step === 7;
   const isDone = step === 8;
-  const hideNav = isProvisioning || isDone;
+  const isPayment = step === 6;
+  const hideNav = isProvisioning || isDone || isPayment;
 
   return (
     <div className="min-h-screen bg-[#050914] flex flex-col">

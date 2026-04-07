@@ -1,7 +1,25 @@
-import { Globe, Monitor, Palette, Server, User } from 'lucide-react';
+import { useState } from 'react';
+import { Globe, Monitor, Palette, Server, User, Lock } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useWizard } from '../../context/WizardContext';
+import { supabase } from '../../lib/supabaseClient';
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const PRICES = { Starter: 19, Business: 49, Pro: 99 };
+
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      color: '#f1f5f9',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      fontSize: '14px',
+      '::placeholder': { color: '#475569' },
+    },
+    invalid: { color: '#f87171' },
+  },
+};
 
 function Row({ icon: Icon, label, value }) {
   return (
@@ -14,6 +32,77 @@ function Row({ icon: Icon, label, value }) {
       </div>
       <span className="text-white text-sm font-semibold">{value}</span>
     </div>
+  );
+}
+
+function PaymentForm({ price }) {
+  const stripe     = useStripe();
+  const elements   = useElements();
+  const { data, setStep } = useWizard();
+  const [paying, setPaying]   = useState(false);
+  const [cardError, setCardError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setPaying(true);
+    setCardError('');
+
+    try {
+      // 1. Create PaymentIntent server-side
+      const { data: intentData, error: intentError } = await supabase.functions.invoke(
+        'create-payment-intent',
+        { body: { plan: data.plan } },
+      );
+      if (intentError || intentData?.error) {
+        throw new Error(intentData?.error ?? intentError?.message ?? 'Payment setup failed');
+      }
+
+      // 2. Confirm card payment client-side
+      const { error: stripeError } = await stripe.confirmCardPayment(intentData.clientSecret, {
+        payment_method: { card: elements.getElement(CardElement) },
+      });
+      if (stripeError) throw new Error(stripeError.message);
+
+      // 3. Advance to provisioning
+      setStep(7);
+    } catch (err) {
+      setCardError(err.message ?? 'Payment failed. Please try again.');
+      setPaying(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 mb-5">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Payment</p>
+        <div className="bg-white/[0.05] border border-white/[0.09] rounded-xl px-4 py-3.5 focus-within:border-cyan-500 focus-within:shadow-[0_0_0_3px_rgba(14,165,233,0.12)] transition">
+          <CardElement options={CARD_ELEMENT_OPTIONS} />
+        </div>
+        {cardError && (
+          <p className="text-red-400 text-xs mt-2">{cardError}</p>
+        )}
+        <p className="text-slate-600 text-xs mt-3 text-center flex items-center justify-center gap-1">
+          <Lock size={10} /> Secured by Stripe. Cancel anytime.
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        disabled={paying || !stripe}
+        className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-8 py-3.5 rounded-xl hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {paying ? (
+          <>
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Processing…
+          </>
+        ) : (
+          `Launch My Website — $${price}/mo →`
+        )}
+      </button>
+    </form>
   );
 }
 
@@ -35,11 +124,11 @@ export default function Step6Review() {
         {/* Summary card */}
         <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 mb-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-3">Your Setup</p>
-          <Row icon={Server}  label="Plan"        value={`${data.plan} — $${price}/mo`} />
-          <Row icon={Globe}   label="Domain"      value={data.domain || '—'} />
-          <Row icon={Monitor} label="Site Type"   value={data.siteType || '—'} />
-          <Row icon={Palette} label="Template"    value={data.template || '—'} />
-          <Row icon={User}    label="Business"    value={data.identity.name || '—'} />
+          <Row icon={Server}  label="Plan"      value={`${data.plan} — $${price}/mo`} />
+          <Row icon={Globe}   label="Domain"    value={data.domain || '—'} />
+          <Row icon={Monitor} label="Site Type" value={data.siteType || '—'} />
+          <Row icon={Palette} label="Template"  value={data.template || '—'} />
+          <Row icon={User}    label="Business"  value={data.identity.name || '—'} />
         </div>
 
         {/* Price breakdown */}
@@ -59,21 +148,10 @@ export default function Step6Review() {
           </div>
         </div>
 
-        {/* Payment */}
-        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Payment</p>
-          <div className="flex flex-col gap-3">
-            <input className="input-field" placeholder="Card number" maxLength={19} />
-            <div className="grid grid-cols-2 gap-3">
-              <input className="input-field" placeholder="MM / YY" maxLength={7} />
-              <input className="input-field" placeholder="CVC" maxLength={4} />
-            </div>
-            <input className="input-field" placeholder="Name on card" />
-          </div>
-          <p className="text-slate-600 text-xs mt-3 text-center">
-            🔒 Secured by Stripe. Cancel anytime.
-          </p>
-        </div>
+        {/* Stripe payment form */}
+        <Elements stripe={stripePromise}>
+          <PaymentForm price={price} />
+        </Elements>
       </div>
     </div>
   );
