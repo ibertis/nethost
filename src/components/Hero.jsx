@@ -17,7 +17,7 @@ export default function Hero() {
 
       <div className="relative max-w-5xl mx-auto px-6 text-center">
         {/* Emblem */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-6 mt-8 sm:mt-0">
           <img src="/NETHOST_emblem.png" alt="NETHOST" className="h-16 w-auto" />
         </div>
 
