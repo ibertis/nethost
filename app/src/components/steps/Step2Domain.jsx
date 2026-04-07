@@ -69,7 +69,7 @@ export default function Step2Domain() {
           <div>
             {/* Search row */}
             <div className="flex gap-2 mb-4">
-              <div className="flex-1 flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl overflow-hidden focus-within:border-cyan-500 focus-within:shadow-[0_0_0_3px_rgba(14,165,233,0.12)] transition">
+              <div className="flex-1 flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl focus-within:border-cyan-500 focus-within:shadow-[0_0_0_3px_rgba(14,165,233,0.12)] transition">
                 <Search size={15} className="text-slate-500 ml-4 shrink-0" />
                 <input
                   className="flex-1 bg-transparent text-white placeholder-slate-600 px-3 py-3 text-sm outline-none"
