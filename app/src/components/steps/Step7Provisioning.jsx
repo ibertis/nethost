@@ -102,7 +102,8 @@ export default function Step7Provisioning() {
             username:           provisionedCredentials.username,
             password:           provisionedCredentials.password,
             email:              provisionedCredentials.email,
-            stripe_customer_id: data.stripeCustomerId ?? null,
+            stripe_customer_id:       data.stripeCustomerId    ?? null,
+            stripe_subscription_id:   data.stripeSubscriptionId ?? null,
           });
 
           // Fire-and-forget confirmation email — don't block on failure

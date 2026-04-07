@@ -53,22 +53,23 @@ function PaymentForm({ price }) {
       // 0. Get user email to attach to Stripe Customer
       const { data: { user } } = await supabase.auth.getUser();
 
-      // 1. Create PaymentIntent server-side (also creates/retrieves Stripe Customer)
-      const { data: intentData, error: intentError } = await supabase.functions.invoke(
-        'create-payment-intent',
+      // 1. Create Subscription server-side (also creates/retrieves Stripe Customer)
+      const { data: subData, error: subError } = await supabase.functions.invoke(
+        'create-subscription',
         { body: { plan: data.plan, email: user?.email } },
       );
-      if (intentError || intentData?.error) {
-        throw new Error(intentData?.error ?? intentError?.message ?? 'Payment setup failed');
+      if (subError || subData?.error) {
+        throw new Error(subData?.error ?? subError?.message ?? 'Payment setup failed');
       }
 
-      // Store customerId in wizard state for use in Step 7 orders insert
-      if (intentData.customerId) {
-        update({ stripeCustomerId: intentData.customerId });
-      }
+      // Store customerId + subscriptionId in wizard state for use in Step 7 orders insert
+      update({
+        stripeCustomerId:    subData.customerId,
+        stripeSubscriptionId: subData.subscriptionId,
+      });
 
-      // 2. Confirm card payment client-side
-      const { error: stripeError } = await stripe.confirmCardPayment(intentData.clientSecret, {
+      // 2. Confirm card payment client-side (activates the subscription)
+      const { error: stripeError } = await stripe.confirmCardPayment(subData.clientSecret, {
         payment_method: { card: elements.getElement(CardElement) },
       });
       if (stripeError) throw new Error(stripeError.message);
