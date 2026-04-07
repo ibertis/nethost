@@ -126,8 +126,8 @@ export default function Step7Provisioning() {
       {/* Logo + pulse ring */}
       <div className="relative mb-10">
         <div className="absolute inset-0 rounded-full bg-cyan-500/10 animate-ping scale-150" />
-        <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
-          <img src="/NETHOST_emblem.png" alt="NETHOST" className="h-12 w-auto" />
+        <div className="relative w-20 h-20 rounded-2xl overflow-hidden">
+          <img src="/NETHOST_emblem.png" alt="NETHOST" className="w-full h-full object-contain" />
         </div>
       </div>
 
