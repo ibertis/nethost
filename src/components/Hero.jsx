@@ -16,6 +16,11 @@ export default function Hero() {
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative max-w-5xl mx-auto px-6 text-center">
+        {/* Emblem */}
+        <div className="flex justify-center mb-6">
+          <img src="/NETHOST_emblem.png" alt="NETHOST" className="h-16 w-auto" />
+        </div>
+
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/[0.09] text-cyan-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
