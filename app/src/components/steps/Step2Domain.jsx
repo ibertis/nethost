@@ -33,7 +33,7 @@ export default function Step2Domain() {
     const available = data.available;
     setAlternatives(data.alternatives ?? []);
     setResult(available ? 'available' : 'taken');
-    if (available) update({ domain, tld, domainAvailable: true });
+    if (available) update({ domain, tld, domainAvailable: true, domainPrice: data.price });
     setChecking(false);
   };
 

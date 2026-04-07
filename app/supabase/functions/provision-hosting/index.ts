@@ -17,25 +17,18 @@ function generatePassword(length = 16): string {
   return pass;
 }
 
-// --- DNS: set A record via Enom after provisioning ---
+// --- DNS: set A records via Porkbun after provisioning ---
 async function setDnsRecords(domain: string, ip: string): Promise<void> {
-  const uid = Deno.env.get('ENOM_USER')!;
-  const pw  = Deno.env.get('ENOM_PASS')!;
-  const dotIndex = domain.indexOf('.');
-  const sld = domain.slice(0, dotIndex);
-  const tld = domain.slice(dotIndex + 1);
-
-  const params = new URLSearchParams({
-    command: 'SetHosts', uid, pw, SLD: sld, TLD: tld, responsetype: 'json',
-    HostName1: '@',   RecordType1: 'A', Address1: ip, TTL1: '300',
-    HostName2: 'www', RecordType2: 'A', Address2: ip, TTL2: '300',
-  });
+  const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
+  const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
+  const base         = `https://api.porkbun.com/api/json/v3/dns/create/${domain}`;
+  const makeBody     = (name: string) => JSON.stringify({ apikey, secretapikey, name, type: 'A', content: ip, ttl: '300' });
+  const opts         = (name: string) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: makeBody(name) });
   // Fire-and-forget — DNS propagation is async; don't throw on failure
-  await fetch('https://reseller.enom.com/interface.asp', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
-  }).catch(() => {/* ignore */});
+  await Promise.all([
+    fetch(base, opts('')),    // @ root
+    fetch(base, opts('www')), // www
+  ]).catch(() => {/* ignore */});
 }
 
 // --- Cloudways provisioning (Business / Pro plans) ---

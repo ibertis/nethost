@@ -12,25 +12,24 @@ serve(async (req) => {
     const { domain } = await req.json();
     if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { status: 400, headers: CORS });
 
-    const uid = Deno.env.get('ENOM_USER')!;
-    const pw  = Deno.env.get('ENOM_PASS')!;
+    const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
+    const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
 
-    const dotIndex = domain.indexOf('.');
-    const sld = domain.slice(0, dotIndex);
-    const tld = domain.slice(dotIndex + 1);
-
-    const url = `https://reseller.enom.com/interface.asp?command=Check&sld=${encodeURIComponent(sld)}&tld=${encodeURIComponent(tld)}&uid=${encodeURIComponent(uid)}&pw=${encodeURIComponent(pw)}&responsetype=json`;
-    const res = await fetch(url);
+    const res = await fetch(`https://api.porkbun.com/api/json/v3/domain/checkDomain/${domain}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apikey, secretapikey }),
+    });
     const data = await res.json();
 
-    // RRPCode 210 = available, 211 = not available, anything else = API/auth error
-    const code = String(data.RRPCode);
-    if (code !== '210' && code !== '211') {
-      throw new Error(`Domain check failed: ${data.RRPText ?? `Enom error ${code}`}`);
+    if (data.status !== 'SUCCESS') {
+      throw new Error(data.message ?? `Porkbun error: ${data.status}`);
     }
 
-    const available = code === '210';
+    const available = data.response?.avail === 'yes';
+    const price     = data.response?.price ?? null;
 
+    const sld = domain.slice(0, domain.indexOf('.'));
     const alternatives = available ? [] : [
       `${sld}.co`,
       `${sld}.net`,
@@ -38,7 +37,7 @@ serve(async (req) => {
     ].filter((a) => a !== domain);
 
     return new Response(
-      JSON.stringify({ available, alternatives }),
+      JSON.stringify({ available, price, alternatives }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } },
     );
   } catch (err) {

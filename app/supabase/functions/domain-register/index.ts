@@ -5,74 +5,28 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// --- NETHOST registrant info (used for all domain registrations) ---
-const REGISTRANT = {
-  FirstName:           'NETHOST',       // ← replace with NETHOST contact first name
-  LastName:            'Admin',        // ← replace with NETHOST contact last name
-  Address1:            '2719 Hollywood Blvd, L-287',      // ← replace with NETHOST business address
-  City:                'Hollywood',            // ← replace with city
-  StateProvince:       'FL',               // ← replace with state abbreviation
-  PostalCode:          '33020',            // ← replace with zip code
-  Country:             'US',
-  EmailAddress:        'support@nethost.co', // ← replace with NETHOST contact email
-  Phone:               '+1.8668076242',    // ← replace with phone in +1.XXXXXXXXXX format
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { domain } = await req.json();
+    const { domain, price } = await req.json();
     if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { status: 400, headers: CORS });
+    if (!price)  return new Response(JSON.stringify({ error: 'price required' }),  { status: 400, headers: CORS });
 
-    const uid = Deno.env.get('ENOM_USER')!;
-    const pw  = Deno.env.get('ENOM_PASS')!;
+    const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
+    const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
 
-    const dotIndex = domain.indexOf('.');
-    const sld = domain.slice(0, dotIndex);
-    const tld = domain.slice(dotIndex + 1);
+    const cost = Math.round(parseFloat(price) * 100); // dollars → cents
 
-    const params = new URLSearchParams({
-      command:                    'Purchase',
-      uid,
-      pw,
-      sld,
-      tld,
-      NumYears:                   '1',
-      UseDNS:                     'default',
-      responsetype:               'json',
-      RegistrantFirstName:        REGISTRANT.FirstName,
-      RegistrantLastName:         REGISTRANT.LastName,
-      RegistrantAddress1:         REGISTRANT.Address1,
-      RegistrantCity:             REGISTRANT.City,
-      RegistrantStateProvince:    REGISTRANT.StateProvince,
-      RegistrantPostalCode:       REGISTRANT.PostalCode,
-      RegistrantCountry:          REGISTRANT.Country,
-      RegistrantEmailAddress:     REGISTRANT.EmailAddress,
-      RegistrantPhone:            REGISTRANT.Phone,
-      // Tech contact (same as registrant)
-      TechFirstName:              REGISTRANT.FirstName,
-      TechLastName:               REGISTRANT.LastName,
-      TechAddress1:               REGISTRANT.Address1,
-      TechCity:                   REGISTRANT.City,
-      TechStateProvince:          REGISTRANT.StateProvince,
-      TechPostalCode:             REGISTRANT.PostalCode,
-      TechCountry:                REGISTRANT.Country,
-      TechEmailAddress:           REGISTRANT.EmailAddress,
-      TechPhone:                  REGISTRANT.Phone,
-    });
-
-    const res = await fetch('https://reseller.enom.com/interface.asp', {
+    const res = await fetch(`https://api.porkbun.com/api/json/v3/domain/create/${domain}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apikey, secretapikey, cost, agreeToTerms: 'yes' }),
     });
-
     const data = await res.json();
 
-    // RRPCode 200 = success
-    if (String(data.RRPCode) !== '200') {
-      throw new Error(data.RRPText ?? data.ErrCount > 0 ? data.errors?.Err1 : 'Domain registration failed');
+    if (data.status !== 'SUCCESS') {
+      throw new Error(data.message ?? `Domain registration failed: ${data.status}`);
     }
 
     return new Response(

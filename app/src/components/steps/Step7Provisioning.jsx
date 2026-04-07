@@ -42,7 +42,7 @@ export default function Step7Provisioning() {
         setActive(0);
         if (!completedTasksRef.current.has(0)) {
           const [registerResult] = await Promise.all([
-            supabase.functions.invoke('domain-register', { body: { domain: data.domain } }),
+            supabase.functions.invoke('domain-register', { body: { domain: data.domain, price: data.domainPrice } }),
             delay(MIN_TASK_MS),
           ]);
           if (registerResult.error || registerResult.data?.error) {
