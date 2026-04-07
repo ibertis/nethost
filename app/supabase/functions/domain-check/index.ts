@@ -23,8 +23,13 @@ serve(async (req) => {
     const res = await fetch(url);
     const data = await res.json();
 
-    // RRPCode 210 = available, 211 = not available
-    const available = String(data.RRPCode) === '210';
+    // RRPCode 210 = available, 211 = not available, anything else = API/auth error
+    const code = String(data.RRPCode);
+    if (code !== '210' && code !== '211') {
+      throw new Error(`Domain check failed: ${data.RRPText ?? `Enom error ${code}`}`);
+    }
+
+    const available = code === '210';
 
     const alternatives = available ? [] : [
       `${sld}.co`,
