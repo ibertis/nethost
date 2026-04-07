@@ -24,7 +24,7 @@ export default function Hero() {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/[0.09] text-cyan-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          Managed hosting built for entrepreneurs & small businesses
+          Managed hosting built for entrepreneurs & small business
         </div>
 
         {/* Headline */}
