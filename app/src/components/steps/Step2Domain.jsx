@@ -154,7 +154,6 @@ export default function Step2Domain() {
                       <span className="ml-auto text-right leading-tight">
                         <span className="block text-slate-500 text-xs line-through">${retailPrice.toFixed(2)}/yr</span>
                         <span className="block text-emerald-500 text-xs font-semibold">Free first year</span>
-                        <span className="block text-slate-600 text-xs mt-0.5">then ${retailPrice.toFixed(2)}/yr</span>
                       </span>
                     </div>
                   ) : (
