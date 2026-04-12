@@ -59,7 +59,7 @@ export default function AdditionalServices({ onContactOpen }) {
 
         <p className="text-center text-slate-600 text-sm mt-8">
           Interested in bundling services?{' '}
-          <button onClick={onContactOpen} className="text-cyan-500/70 hover:text-cyan-400 transition-colors">
+          <button onClick={onContactOpen} className="text-cyan-400 hover:underline">
             Get in touch for a custom quote.
           </button>
         </p>
