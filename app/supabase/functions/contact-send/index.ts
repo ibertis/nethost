@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { name, email, message } = await req.json();
+    const { name, email, phone, message } = await req.json();
     if (!name || !email || !message) {
       return new Response(
         JSON.stringify({ error: 'name, email, and message are required' }),
@@ -54,6 +54,12 @@ serve(async (req) => {
                     <a href="mailto:${email}" style="color:#22d3ee;font-size:14px;text-decoration:none;">${email}</a>
                   </td>
                 </tr>
+                ${phone ? `<tr>
+                  <td style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <p style="margin:0 0 2px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Phone</p>
+                    <a href="tel:${phone}" style="color:#22d3ee;font-size:14px;text-decoration:none;">${phone}</a>
+                  </td>
+                </tr>` : ''}
                 <tr>
                   <td style="padding:14px 18px;">
                     <p style="margin:0 0 6px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;">Message</p>
