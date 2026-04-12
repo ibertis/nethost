@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
+import ContactModal from '../ContactModal';
 
 const PLANS = [
   {
@@ -25,6 +27,7 @@ const PLANS = [
 
 export default function Step1Plan() {
   const { data, update } = useWizard();
+  const [contactOpen, setContactOpen] = useState(false);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
@@ -88,14 +91,15 @@ export default function Step1Plan() {
         </div>
         <p className="mt-4 text-center text-slate-500 text-sm">
           Need a fully managed, done-for-you experience?{' '}
-          <a
-            href="mailto:hello@nethost.co"
+          <button
+            onClick={() => setContactOpen(true)}
             className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
           >
             Talk to us about white-glove setup →
-          </a>
+          </button>
         </p>
       </div>
+      <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   );
 }

@@ -55,7 +55,7 @@ export default function Navbar({ onContactOpen }) {
             onClick={onContactOpen}
             className="hidden md:inline-flex text-sm text-slate-400 hover:text-white transition-colors"
           >
-            Contact
+            Contact Us
           </button>
           <a
             href="https://app.nethost.co"
@@ -90,7 +90,7 @@ export default function Navbar({ onContactOpen }) {
             onClick={() => { setMobileOpen(false); onContactOpen(); }}
             className="text-sm text-slate-300 hover:text-white transition-colors text-left"
           >
-            Contact
+            Contact Us
           </button>
           <a
             href="https://app.nethost.co"
