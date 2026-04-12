@@ -26,7 +26,7 @@ export default function App() {
       <WhyNethost />
       <Process />
       <Pricing />
-      <AdditionalServices />
+      <AdditionalServices onContactOpen={() => setContactOpen(true)} />
       <Testimonials />
       <CtaBanner />
       <Footer onContactOpen={() => setContactOpen(true)} />

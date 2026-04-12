@@ -23,7 +23,7 @@ const SERVICES = [
   },
 ];
 
-export default function AdditionalServices() {
+export default function AdditionalServices({ onContactOpen }) {
   return (
     <section id="services" className="py-20 bg-[#050914]">
       <div className="max-w-6xl mx-auto px-6">
@@ -59,9 +59,9 @@ export default function AdditionalServices() {
 
         <p className="text-center text-slate-600 text-sm mt-8">
           Interested in bundling services?{' '}
-          <a href="mailto:hello@nethost.co" className="text-cyan-500/70 hover:text-cyan-400 transition-colors">
+          <button onClick={onContactOpen} className="text-cyan-500/70 hover:text-cyan-400 transition-colors">
             Get in touch for a custom quote.
-          </a>
+          </button>
         </p>
       </div>
     </section>
