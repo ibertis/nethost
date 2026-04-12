@@ -28,8 +28,8 @@ export default function Footer({ onContactOpen }) {
               <img src="/nethost-logo.png" alt="NETHOST" className="h-6 w-auto" />
             </a>
             <p className="text-slate-500 text-sm leading-relaxed mb-5">
-              Stunning websites built for your success. Professional hosting, design, and digital
-              strategy for entrepreneurs and small businesses.
+              Fully managed web hosting for entrepreneurs and small businesses. We handle the
+              servers, SSL, and uptime — you focus on running your business.
             </p>
             <div className="flex flex-col gap-2">
               <a
