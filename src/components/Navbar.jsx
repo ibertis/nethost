@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { label: 'Testimonials', href: '#testimonials' },
 ];
 
-export default function Navbar() {
+export default function Navbar({ onContactOpen }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -51,6 +51,12 @@ export default function Navbar() {
 
         {/* CTA + mobile toggle */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={onContactOpen}
+            className="hidden md:inline-flex text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            Contact
+          </button>
           <a
             href="https://app.nethost.co"
             className="hidden md:inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full hover:opacity-90 transition"
@@ -80,6 +86,12 @@ export default function Navbar() {
               {l.label}
             </a>
           ))}
+          <button
+            onClick={() => { setMobileOpen(false); onContactOpen(); }}
+            className="text-sm text-slate-300 hover:text-white transition-colors text-left"
+          >
+            Contact
+          </button>
           <a
             href="https://app.nethost.co"
             className="inline-flex items-center justify-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition"

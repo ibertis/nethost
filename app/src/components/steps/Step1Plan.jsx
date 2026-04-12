@@ -34,7 +34,7 @@ export default function Step1Plan() {
           Choose Your Hosting Plan
         </h1>
         <p className="text-slate-400 text-sm text-center mb-10">
-          You can upgrade or change your plan at any time.
+          No long-term contracts. Cancel anytime.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -80,6 +80,21 @@ export default function Step1Plan() {
             );
           })}
         </div>
+
+        <div className="mt-8 flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/[0.06]" />
+          <span className="text-slate-600 text-xs">or</span>
+          <div className="h-px flex-1 bg-white/[0.06]" />
+        </div>
+        <p className="mt-4 text-center text-slate-500 text-sm">
+          Need a fully managed, done-for-you experience?{' '}
+          <a
+            href="mailto:hello@nethost.co"
+            className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
+          >
+            Talk to us about white-glove setup →
+          </a>
+        </p>
       </div>
     </div>
   );

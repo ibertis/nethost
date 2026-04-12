@@ -13,11 +13,11 @@ const LINKS = {
     { label: 'Process', href: '#process' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'Testimonials', href: '#testimonials' },
-    { label: 'Contact', href: 'mailto:hello@nethost.co' },
+    { label: 'Contact', href: null },
   ],
 };
 
-export default function Footer() {
+export default function Footer({ onContactOpen }) {
   return (
     <footer className="bg-[#030610] border-t border-white/[0.06] pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-6">
@@ -62,12 +62,21 @@ export default function Footer() {
               <ul className="flex flex-col gap-2.5">
                 {items.map((item) => (
                   <li key={item.label}>
-                    <a
-                      href={item.href}
-                      className="text-slate-500 hover:text-slate-300 transition-colors text-sm"
-                    >
-                      {item.label}
-                    </a>
+                    {item.label === 'Contact' ? (
+                      <button
+                        onClick={onContactOpen}
+                        className="text-slate-500 hover:text-slate-300 transition-colors text-sm"
+                      >
+                        {item.label}
+                      </button>
+                    ) : (
+                      <a
+                        href={item.href}
+                        className="text-slate-500 hover:text-slate-300 transition-colors text-sm"
+                      >
+                        {item.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
