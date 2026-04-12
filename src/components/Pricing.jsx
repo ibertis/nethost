@@ -57,7 +57,7 @@ const PLANS = [
   },
 ];
 
-export default function Pricing() {
+export default function Pricing({ onContactOpen }) {
   return (
     <section id="pricing" className="py-24 bg-[#07091a]">
       <div className="max-w-6xl mx-auto px-6">
@@ -131,9 +131,9 @@ export default function Pricing() {
           <p className="text-slate-500 text-sm">
             All plans include free SSL, daily backups, and Cloudflare CDN. &nbsp;
             30-day money-back guarantee on all plans. &nbsp;
-            <a href="mailto:hello@nethost.co" className="text-cyan-400 hover:underline">
+            <button onClick={onContactOpen} className="text-cyan-400 hover:underline">
               Need a custom plan? Let's talk.
-            </a>
+            </button>
           </p>
         </div>
       </div>
