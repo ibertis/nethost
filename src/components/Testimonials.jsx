@@ -4,42 +4,42 @@ const TESTIMONIALS = [
   {
     quote:
       "NETHOST launched our site in two weeks and handled everything — hosting, design, even our domain setup. I had zero stress throughout the whole process.",
-    name: 'Daniel Clark',
+    name: 'Daniel C.',
     role: 'Founder, HealthPlus',
     initials: 'DC',
   },
   {
     quote:
       "We went from a broken WordPress site to a fast, professional platform that actually converts. Our lead volume doubled in the first month.",
-    name: 'Jessica Lee',
-    role: 'CEO, StyleFusion',
+    name: 'Jessica L.',
+    role: 'CEO, Style Fusion',
     initials: 'JL',
   },
   {
     quote:
       "The SEO and ongoing support have been game-changers. We rank on the first page for our core keywords now, which just wasn't happening before.",
-    name: 'Michael Thompson',
+    name: 'Michael T.',
     role: 'Owner, GreenGrocer',
     initials: 'MT',
   },
   {
     quote:
       "I tried three other agencies before NETHOST. Night and day difference. They actually understand small business needs and communicate clearly.",
-    name: 'Emily Clark',
+    name: 'Emily C.',
     role: 'Director, FashionFlair',
     initials: 'EC',
   },
   {
     quote:
       "From branding to web hosting to paid ads — having it all in one place with one team that knows our business is incredibly valuable.",
-    name: 'Kevin Martinez',
+    name: 'Kevin M.',
     role: 'Co-Founder, FitLife',
     initials: 'KM',
   },
   {
     quote:
       "NETHOST feels like having an in-house digital team without the overhead. Responsive, professional, and genuinely invested in our success.",
-    name: 'Rachel Adams',
+    name: 'Rachel A.',
     role: 'Founder, PureBeauty',
     initials: 'RA',
   },
