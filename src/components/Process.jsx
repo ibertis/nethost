@@ -1,27 +1,27 @@
 const STEPS = [
   {
     number: '01',
-    title: 'Discovery',
+    title: 'Pick a Plan',
     description:
-      'We start by understanding your business, goals, and audience — so everything we build is aligned from day one.',
+      'Choose the hosting tier that fits your business. No long-term contracts, no surprises.',
   },
   {
     number: '02',
-    title: 'Design',
+    title: 'Configure Your Site',
     description:
-      'We craft a visual identity and site structure that reflects your brand and guides visitors toward action.',
+      'Register a domain, select a site style, and tell us about your brand — all in under 5 minutes.',
   },
   {
     number: '03',
-    title: 'Development',
+    title: 'Go Live Instantly',
     description:
-      'Your site is built fast, clean, and optimized — for performance, SEO, and mobile from the ground up.',
+      'We provision hosting, configure SSL, and deploy your site automatically. No technical work required.',
   },
   {
     number: '04',
-    title: 'Launch',
+    title: 'We Keep It Running',
     description:
-      'We deploy, configure hosting, and run final checks. Then we hand it off — with full support going forward.',
+      'Uptime monitoring, updates, and support — handled. You focus on your business, we handle the rest.',
   },
 ];
 
@@ -38,7 +38,7 @@ export default function Process() {
             Our Process
           </h2>
           <p className="text-slate-400 text-lg max-w-xl mx-auto">
-            A clear, four-step process that keeps you informed and in control at every stage.
+            From plan selection to a live website in four simple steps. No long-term contracts — cancel anytime.
           </p>
         </div>
 
