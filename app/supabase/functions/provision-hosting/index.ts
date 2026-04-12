@@ -17,18 +17,32 @@ function generatePassword(length = 16): string {
   return pass;
 }
 
-// --- DNS: set A records via Porkbun after provisioning ---
+// --- DNS: set A records via Namecheap after provisioning ---
 async function setDnsRecords(domain: string, ip: string): Promise<void> {
-  const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
-  const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
-  const base         = `https://api.porkbun.com/api/json/v3/dns/create/${domain}`;
-  const makeBody     = (name: string) => JSON.stringify({ apikey, secretapikey, name, type: 'A', content: ip, ttl: '300' });
-  const opts         = (name: string) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: makeBody(name) });
+  const apiUser = Deno.env.get('NAMECHEAP_API_USER')!;
+  const apiKey  = Deno.env.get('NAMECHEAP_API_KEY')!;
+  const dot     = domain.indexOf('.');
+  const sld     = domain.slice(0, dot);
+  const tld     = domain.slice(dot + 1);
+  const params  = new URLSearchParams({
+    ApiUser:     apiUser,
+    ApiKey:      apiKey,
+    UserName:    apiUser,
+    ClientIp:    '76.13.118.227',
+    Command:     'namecheap.domains.dns.setHosts',
+    SLD:         sld,
+    TLD:         tld,
+    HostName1:   '@',
+    RecordType1: 'A',
+    Address1:    ip,
+    TTL1:        '300',
+    HostName2:   'www',
+    RecordType2: 'A',
+    Address2:    ip,
+    TTL2:        '300',
+  });
   // Fire-and-forget — DNS propagation is async; don't throw on failure
-  await Promise.all([
-    fetch(base, opts('')),    // @ root
-    fetch(base, opts('www')), // www
-  ]).catch(() => {/* ignore */});
+  fetch(`https://api.namecheap.com/xml.response?${params}`).catch(() => {/* ignore */});
 }
 
 // --- Cloudways provisioning (Business / Pro plans) ---
@@ -72,7 +86,6 @@ async function provisionCloudways(domain: string, siteName: string) {
   const appData = await appRes.json();
   if (!appData?.app?.id) throw new Error('Cloudways app creation failed');
 
-  const appId   = appData.app.id;
   const serverIp = server.public_ip ?? server.master_ip;
 
   await setDnsRecords(domain, serverIp);
@@ -82,77 +95,25 @@ async function provisionCloudways(domain: string, siteName: string) {
     username:   wpUser,
     password:   wpPass,
     email:      `hello@${domain}`,
-    serverIp,
-    appId,
   };
 }
 
 // --- CyberPanel provisioning (Starter plan) ---
 async function provisionCyberPanel(domain: string) {
-  const cpUrl  = Deno.env.get('CYBERPANEL_URL')!;  // e.g. https://76.13.118.227:8090
-  const cpUser = Deno.env.get('CYBERPANEL_USER') ?? 'admin';
-  const cpPass = Deno.env.get('CYBERPANEL_PASS')!;
+  const proxyUrl    = Deno.env.get('PROXY_URL_CYBERPANEL')!;
+  const proxySecret = Deno.env.get('PROXY_SECRET')!;
 
-  const websiteOwner = domain.replace(/[^a-z0-9]/g, '').slice(0, 8) + Math.floor(Math.random() * 100);
-  const ownerPassword = generatePassword();
-  const wpPassword = generatePassword();
-  const ownerEmail = `hello@${domain}`;
-
-  // @ts-ignore — Deno-specific, bypasses self-signed cert on CyberPanel
-  const httpClient = Deno.createHttpClient({ rejectUnauthorized: false });
-
-  // Step 1: Create website
-  const createRes = await fetch(`${cpUrl}/api/createWebsite`, {
+  const res = await fetch(proxyUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      adminUser: cpUser,
-      adminPass: cpPass,
-      domainName: domain,
-      ownerEmail,
-      websiteOwner,
-      ownerPassword,
-      packageName: 'Default',
-    }),
-    // @ts-ignore
-    client: httpClient,
+    headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
+    body: JSON.stringify({ domain }),
   });
-  const createData = await createRes.json();
-  if (createData.errorMessage && createData.errorMessage !== 'None') {
-    throw new Error(`CyberPanel createWebsite failed: ${createData.errorMessage}`);
-  }
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
 
-  // Step 2: Install WordPress
-  const wpRes = await fetch(`${cpUrl}/api/installWordPress`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      adminUser: cpUser,
-      adminPass: cpPass,
-      domainName: domain,
-      title: domain,
-      adminEmail: ownerEmail,
-      wploginUser: 'admin',
-      wploginPass: wpPassword,
-      wpType: '1',
-    }),
-    // @ts-ignore
-    client: httpClient,
-  });
-  const wpData = await wpRes.json();
-  if (wpData.errorMessage && wpData.errorMessage !== 'None') {
-    throw new Error(`CyberPanel installWordPress failed: ${wpData.errorMessage}`);
-  }
+  await setDnsRecords(domain, '76.13.118.227');
 
-  const serverIp = new URL(cpUrl).hostname;
-  await setDnsRecords(domain, serverIp);
-
-  return {
-    wpAdminUrl: `https://${domain}/wp-admin`,
-    username: 'admin',
-    password: wpPassword,
-    email: ownerEmail,
-  };
+  return data;
 }
 
 // --- Main handler ---
@@ -180,7 +141,7 @@ serve(async (req) => {
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } },
+      { headers: { ...CORS, 'Content-Type': 'application/json' } },
     );
   }
 });

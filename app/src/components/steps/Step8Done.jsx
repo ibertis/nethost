@@ -58,7 +58,7 @@ export default function Step8Done() {
   const domain      = creds?.domain      ?? data.domain ?? 'yourdomain.com';
   const wpAdminUrl  = creds?.wpAdminUrl  ?? `https://${domain}/wp-admin`;
   const username    = creds?.username    ?? 'admin';
-  const password    = creds?.password    ?? 'Nh#9mX2kP!';
+  const password    = creds?.password    ?? '(not available)';
   const email       = creds?.email       ?? `hello@${domain}`;
 
   useEffect(() => {

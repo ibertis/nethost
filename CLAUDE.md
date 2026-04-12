@@ -22,24 +22,20 @@ A managed web hosting business for entrepreneurs, startups, and small businesses
 
 ---
 
-## Hosting Products (What NETHOST Can Deliver)
-
-Backend model: **managed reseller hosting** — NETHOST manages infrastructure on behalf of clients. Clients never interact with the underlying provider.
+## Hosting Infrastructure (Actual Implementation)
 
 | Plan | Infrastructure | Price |
 |---|---|---|
-| Starter | cPanel/WHM reseller account (Liquid Web, A2 Hosting, Hostwinds) | $19/mo |
-| Business | Managed WordPress via Cloudways or GridPane on DigitalOcean/Vultr | $49/mo |
-| Pro | Managed VPS via RunCloud / Ploi / ServerPilot | $99/mo |
+| Starter | CyberPanel on dedicated VPS at `api.nethost.co` (IP: `76.13.118.227`) | $19/mo |
+| Business | Managed WordPress via Cloudways | $49/mo |
+| Pro | Managed WordPress via Cloudways (higher tier) | $99/mo |
 
-**Automatable add-ons:**
-- Domain registration — Namecheap API or Cloudflare Registrar API
-- Business email — Zoho Mail or Google Workspace reseller APIs
-- SSL — Let's Encrypt (auto-provision + auto-renew)
-- CDN — Cloudflare (free tier or resell Pro)
-- Backups — JetBackup (cPanel) or Cloudways built-in
-
-**Not currently offered:** Paid ad campaign management, custom app development.
+**Domain registration:** Namecheap API via PHP proxy at `api.nethost.co`
+**DNS management:** Namecheap setHosts API (sets A records pointing to server IP on provisioning)
+**Transactional email:** Resend API (order confirmations via `send-order-confirmation` Edge Function)
+**Payment:** Stripe (subscriptions via `create-subscription` Edge Function + Stripe Elements)
+**SSL:** CyberPanel handles Let's Encrypt SSL for Starter; Cloudways handles SSL for Business/Pro
+**Backups:** CyberPanel built-in for Starter; Cloudways built-in for Business/Pro
 
 ---
 
@@ -106,8 +102,6 @@ Located in `public/` for both apps (identical files copied):
 - `nethost-logo.png` — 640×102px white horizontal wordmark (white on transparent, works on dark bg)
 - `favicon.png` — 460×416px NETHOST emblem
 
-Both were downloaded from `nethost.co` (wp-content/uploads/2025/10/ and /2025/11/).
-
 ---
 
 ## Marketing Site (`/Users/gabrielibertis/Sites/NETHOST/`)
@@ -155,7 +149,7 @@ export PATH="/opt/homebrew/bin:$PATH" && cd /Users/gabrielibertis/Sites/NETHOST/
 ```
 
 ### Purpose
-Full onboarding wizard — guides a new customer from plan selection through domain, site setup, and identity to a simulated live provisioning sequence. ~5 min of user input, ~30 sec animated provisioning.
+Full onboarding wizard — guides a new customer from plan selection through domain, site setup, and identity to live provisioning. Steps 1–6 are user input; Step 7 calls real APIs; Step 8 displays real credentials.
 
 ### File Structure
 
@@ -168,14 +162,56 @@ app/src/
 └── components/
     ├── WizardShell.jsx              # Top bar (logo→nethost.co), 6-step progress pills, Back/Continue nav
     └── steps/
-        ├── Step1Plan.jsx            # 3 plan cards, Business pre-selected, CheckCircle2 on active
-        ├── Step2Domain.jsx          # Register tab (search + TLD dropdown + simulated availability) or Connect tab
+        ├── Step1Plan.jsx            # 3 plan cards (Starter $19 / Business $49 / Pro $99), Business pre-selected
+        ├── Step2Domain.jsx          # Register tab (Namecheap availability check) or Connect tab
         ├── Step3SiteType.jsx        # 2×2 icon grid: Business / Portfolio / Blog / E-commerce
         ├── Step4Template.jsx        # 3×2 gradient thumbnail grid: Minimal/Bold/Corporate/Creative/Modern/Classic
         ├── Step5Identity.jsx        # Name, tagline, logo drag-drop, 6 color presets + custom, live mini-preview
-        ├── Step6Review.jsx          # Order summary rows, price breakdown, payment fields (UI only, no processing)
-        ├── Step7Provisioning.jsx    # 7-task sequential animation (spinner→checkmark), progress bar, auto-advances to step 8
-        └── Step8Done.jsx            # SVG checkmark ring animation, CSS confetti, credentials card + copy buttons
+        ├── Step6Review.jsx          # Order summary, price breakdown, real Stripe payment (Elements + create-subscription Edge Function)
+        ├── Step7Provisioning.jsx    # Calls domain-register + provision-hosting Edge Functions; writes to orders table; sends confirmation email; shows animated task list
+        └── Step8Done.jsx            # Animated checkmark, confetti, real credentials card from provisionedCredentials state
+```
+
+### Supabase Edge Functions
+
+| Function | Purpose |
+|---|---|
+| `create-subscription` | Creates Stripe customer + subscription, returns clientSecret for client-side confirmation |
+| `domain-check` | Checks Namecheap availability + price via PHP proxy at api.nethost.co |
+| `domain-register` | Registers domain via Namecheap PHP proxy at api.nethost.co |
+| `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap |
+| `send-order-confirmation` | Sends branded HTML email via Resend with credentials |
+| `create-portal-session` | Creates Stripe Customer Portal session (future customer dashboard feature) |
+
+### VPS Proxy (api.nethost.co)
+
+PHP scripts at `/home/api.nethost.co/` on the VPS handle operations that require server-side CyberPanel or Namecheap API access:
+
+| Script | Role |
+|---|---|
+| `provision-cyberpanel.php` | Creates CyberPanel website + installs WordPress; returns wp-admin URL + credentials |
+| `check-domain.php` | Checks Namecheap domain availability + pricing |
+| `register-domain.php` | Registers domain via Namecheap API |
+| `nethost-secrets.php` | Contains `PROXY_SECRET`, `CYBERPANEL_USER`, `CYBERPANEL_PASS`, `NAMECHEAP_API_USER`, `NAMECHEAP_API_KEY` |
+
+**VPS SSH:** `root@api.nethost.co` — password in memory file `reference_nethost_vps.md`
+**Deploy PHP changes:** `sshpass -p '...' scp -o StrictHostKeyChecking=no <file> root@api.nethost.co:/home/api.nethost.co/public_html/<file>`
+
+### Required Supabase Secrets
+
+```
+STRIPE_SECRET_KEY
+STRIPE_PRICE_STARTER
+STRIPE_PRICE_BUSINESS
+STRIPE_PRICE_PRO
+CLOUDWAYS_EMAIL
+CLOUDWAYS_API_KEY
+NAMECHEAP_API_USER
+NAMECHEAP_API_KEY
+PROXY_URL_CYBERPANEL     # e.g. https://api.nethost.co/provision-cyberpanel.php
+PROXY_URL                # e.g. https://api.nethost.co/register-domain.php (used by domain-register)
+PROXY_SECRET             # Must match PROXY_SECRET in nethost-secrets.php on VPS
+RESEND_API_KEY
 ```
 
 ### WizardContext State Shape
@@ -187,42 +223,27 @@ app/src/
   tld: '.com',
   domainOption: 'register', // 'register' | 'connect'
   domainAvailable: null,
-  siteType: '',             // 'Business' | 'Portfolio' | 'Blog' | 'E-commerce'
-  template: '',             // 'Minimal' | 'Bold' | 'Corporate' | 'Creative' | 'Modern' | 'Classic'
-  identity: {
-    name: '',
-    tagline: '',
-    logoUrl: '',            // object URL from FileReader
-    color: '#0ea5e9'
-  }
+  domainPrice: null,        // Namecheap wholesale price string
+  domainIsFree: null,       // true if price <= $15 (eligible for free 1st year promo)
+  siteType: '',
+  template: '',
+  identity: { name: '', tagline: '', logoUrl: '', color: '#0ea5e9' },
+  stripeCustomerId: '',
+  stripeSubscriptionId: '',
+  provisionedCredentials: null, // set by Step7: { domain, wpAdminUrl, username, password, email }
 }
 ```
 
-### canAdvance() Logic (WizardContext)
-- Step 1: plan selected
-- Step 2: domain string non-empty
-- Step 3: siteType selected
-- Step 4: template selected
-- Step 5: identity.name non-empty
-- Step 6: always true (payment UI only)
-- Steps 7–8: nav hidden entirely
-
 ### Provisioning Tasks (Step7Provisioning.jsx)
-Simulated with `setTimeout` chains. Each task: spinner while running → CheckCircle2 on complete → next task starts. Auto-advances to Step 8 after 600ms delay post-completion.
-
-```js
-{ label: 'Registering domain',             duration: 900  },
-{ label: 'Setting up hosting environment', duration: 1300 },
-{ label: 'Configuring SSL certificate',    duration: 1000 },
-{ label: 'Installing WordPress',           duration: 1600 },
-{ label: 'Setting up business email',      duration: 900  },
-{ label: 'Configuring CDN',                duration: 800  },
-{ label: 'Running final checks',           duration: 1100 },
 ```
-**To wire real APIs:** replace the `setTimeout` in the `run()` function with actual API calls to Namecheap, Cloudways/cPanel WHM, Let's Encrypt, etc.
+Task 0: Registering domain       → calls domain-register Edge Function
+Task 1: Setting up hosting       → calls provision-hosting Edge Function (CyberPanel or Cloudways)
+Tasks 2–6: SSL, WordPress, email, CDN, final checks → visual delays (800ms each) while hosting finishes
+```
+After tasks complete: inserts to `orders` table in Supabase, fires `send-order-confirmation`, advances to Step 8.
 
 ### Step8Done Credentials Card
-Displays hardcoded placeholder credentials (domain URL, /wp-admin, temp password, email). Each row has a copy-to-clipboard button using `navigator.clipboard`. Replace with real provisioned values from backend response.
+Reads `data.provisionedCredentials` from WizardContext (populated by Step 7). Falls back to domain-derived placeholders if missing.
 
 ---
 
@@ -235,22 +256,24 @@ Displays hardcoded placeholder credentials (domain URL, /wp-admin, temp password
 - Use the `.text-gradient` utility for any headline accent spans
 - Keep AdditionalServices visually muted relative to hosting sections — lower contrast, smaller cards
 - Update this CLAUDE.md whenever new components, routes, or architectural decisions are added
+- Deploy Edge Functions via: `supabase functions deploy <name> --project-ref qsvwdemwttwrqgvsonql`
+- Deploy PHP changes via sshpass SCP to `root@api.nethost.co:/home/api.nethost.co/`
 
 ### Don't
 - Don't use dynamic Tailwind class construction (`bg-${color}-500`) — Tailwind purges these
-- Don't add framer-motion animations — it's installed in the marketing site but not actively used; keep animations CSS-based
-- Don't expose hosting provider names (Cloudways, A2, Liquid Web) to end users — NETHOST is the brand
-- Don't add real payment processing without proper PCI-compliant backend (Stripe Elements, not raw card fields)
+- Don't add framer-motion animations — keep animations CSS-based
+- Don't expose infrastructure provider names (CyberPanel, Cloudways, Namecheap) to end users in the UI — NETHOST is the brand
 - Don't merge the marketing site and portal app into a single Vite project
+- Don't use `create-payment-intent` Edge Function — it's deleted; use `create-subscription` instead
 
 ---
 
 ## Pending / Future Work
 
-- [ ] Wire Namecheap API for real domain registration (Step 2)
-- [ ] Wire Cloudways or cPanel WHM API for real hosting provisioning (Step 7)
-- [ ] Wire Stripe for real payment processing (Step 6)
-- [ ] Add auth (login/signup) before Step 1 in portal
-- [ ] Build customer dashboard (post-provisioning) at app.nethost.co
+- [ ] Verify `orders` table exists in Supabase (Step7 inserts to it — schema migration needed if not)
+- [ ] Verify `PROXY_URL` secret is set (for `domain-register` function; separate from `PROXY_URL_CYBERPANEL`)
+- [ ] Test Cloudways provisioning end-to-end for Business/Pro plans
+- [ ] Add auth gate before Step 1 (wizard calls `supabase.auth.getUser()` in Step 6; unauthenticated users will fail at payment)
+- [ ] Build customer dashboard (post-provisioning) at app.nethost.co — `create-portal-session` Edge Function is ready for billing management
 - [ ] Connect "View Hosting Plans" / "Get Started" CTAs on marketing site → `app.nethost.co`
 - [ ] Add `.gitignore` to both projects if pushing to version control

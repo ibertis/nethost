@@ -32,27 +32,48 @@ async function getOrCreateCustomer(secretKey: string, email: string): Promise<st
   return customer.id;
 }
 
+const ok  = (body: unknown) => new Response(JSON.stringify(body), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+const err = (msg: string)   => new Response(JSON.stringify({ error: msg }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
     const { plan, email } = await req.json();
 
-    if (!plan || !PRICE_IDS[plan]) {
-      return new Response(JSON.stringify({ error: 'Valid plan required' }), { status: 400, headers: CORS });
-    }
+    if (!plan || !PRICE_IDS[plan]) return err('Valid plan required');
+
     const priceId = PRICE_IDS[plan];
-    if (!priceId) {
-      return new Response(JSON.stringify({ error: `Price ID not configured for plan: ${plan}` }), { status: 500, headers: CORS });
-    }
+    if (!priceId) return err(`Price ID not configured for plan: ${plan}`);
+    if (!email)   return err('Email required');
 
     const secretKey = Deno.env.get('STRIPE_SECRET_KEY')!;
 
-    // Create or retrieve Stripe Customer
-    if (!email) {
-      return new Response(JSON.stringify({ error: 'Email required' }), { status: 400, headers: CORS });
-    }
     const customerId = await getOrCreateCustomer(secretKey, email);
+
+    // Reuse any existing incomplete subscription for this customer + price to avoid
+    // Stripe concurrent-access errors from cancel + immediate recreate race conditions
+    const existingRes = await fetch(
+      `https://api.stripe.com/v1/subscriptions?customer=${customerId}&status=incomplete&limit=10`,
+      { headers: { 'Authorization': `Bearer ${secretKey}` } },
+    );
+    const existingData = await existingRes.json();
+    if (Array.isArray(existingData.data)) {
+      for (const sub of existingData.data) {
+        if (sub.items?.data?.[0]?.price?.id === priceId) {
+          // Fetch with expanded PaymentIntent to get the clientSecret
+          const expandedRes = await fetch(
+            `https://api.stripe.com/v1/subscriptions/${sub.id}?expand[]=latest_invoice.payment_intent`,
+            { headers: { 'Authorization': `Bearer ${secretKey}` } },
+          );
+          const expanded = await expandedRes.json();
+          const clientSecret = expanded.latest_invoice?.payment_intent?.client_secret;
+          if (clientSecret) {
+            return ok({ clientSecret, customerId, subscriptionId: sub.id });
+          }
+        }
+      }
+    }
 
     // Create subscription in "incomplete" state — requires payment confirmation client-side
     const subBody = new URLSearchParams({
@@ -73,19 +94,13 @@ serve(async (req) => {
     });
 
     const subscription = await subRes.json();
-    if (subscription.error) throw new Error(subscription.error.message ?? 'Stripe subscription error');
+    if (subscription.error) return err(subscription.error.message ?? 'Stripe subscription error');
 
     const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
-    if (!clientSecret) throw new Error('No client secret returned from Stripe');
+    if (!clientSecret) return err('No client secret returned from Stripe');
 
-    return new Response(
-      JSON.stringify({ clientSecret, customerId, subscriptionId: subscription.id }),
-      { headers: { ...CORS, 'Content-Type': 'application/json' } },
-    );
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } },
-    );
+    return ok({ clientSecret, customerId, subscriptionId: subscription.id });
+  } catch (e) {
+    return err(e.message ?? 'Unexpected error');
   }
 });

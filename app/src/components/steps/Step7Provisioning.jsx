@@ -3,6 +3,8 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 import { supabase } from '../../lib/supabaseClient';
 
+const TEST_MODE = import.meta.env.VITE_TEST_MODE === 'true';
+
 const TASKS = [
   { label: 'Registering domain' },
   { label: 'Setting up hosting environment' },
@@ -38,9 +40,11 @@ export default function Step7Provisioning() {
   useEffect(() => {
     const run = async () => {
       try {
-        // Task 0 — Register domain (skip if already completed on a prior attempt)
+        // Task 0 — Register domain
+        // Skip if: already completed on a prior attempt, user is connecting their own domain, or test mode is active
         setActive(0);
-        if (!completedTasksRef.current.has(0)) {
+        const shouldRegisterDomain = data.domainOption === 'register' && !TEST_MODE;
+        if (shouldRegisterDomain && !completedTasksRef.current.has(0)) {
           const [registerResult] = await Promise.all([
             supabase.functions.invoke('domain-register', { body: { domain: data.domain, price: data.domainPrice } }),
             delay(MIN_TASK_MS),
@@ -53,10 +57,19 @@ export default function Step7Provisioning() {
         }
         complete(0);
 
-        // Task 1 — Set up hosting (skip if already completed on a prior attempt)
+        // Task 1 — Set up hosting
         setActive(1);
         let creds;
-        if (!completedTasksRef.current.has(1)) {
+        if (TEST_MODE) {
+          // Test mode: skip real provisioning, return mock credentials
+          await delay(MIN_TASK_MS * 2);
+          creds = {
+            wpAdminUrl: `https://${data.domain}/wp-admin`,
+            username:   'admin',
+            password:   'TestPassword123',
+            email:      `hello@${data.domain}`,
+          };
+        } else if (!completedTasksRef.current.has(1)) {
           const [provisionResult] = await Promise.all([
             supabase.functions.invoke('provision-hosting', {
               body: { plan: data.plan, domain: data.domain, siteName: data.identity?.name || data.domain },
@@ -94,7 +107,8 @@ export default function Step7Provisioning() {
         // Persist order to Supabase for dashboard
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.from('orders').insert({
+          // Non-blocking — table may not exist yet; don't let this fail the wizard
+          supabase.from('orders').insert({
             user_id:            user.id,
             plan:               data.plan,
             domain:             provisionedCredentials.domain,
@@ -104,7 +118,7 @@ export default function Step7Provisioning() {
             email:              provisionedCredentials.email,
             stripe_customer_id:       data.stripeCustomerId    ?? null,
             stripe_subscription_id:   data.stripeSubscriptionId ?? null,
-          });
+          }).then(() => {}).catch(() => {});
 
           // Fire-and-forget confirmation email — don't block on failure
           supabase.functions.invoke('send-order-confirmation', {
