@@ -32,7 +32,7 @@ A managed web hosting business for entrepreneurs, startups, and small businesses
 
 **Domain registration:** Namecheap API via PHP proxy at `api.nethost.co`
 **DNS management:** Namecheap setHosts API (sets A records pointing to server IP on provisioning)
-**Transactional email:** Resend API (order confirmations via `send-order-confirmation` Edge Function)
+**Transactional email:** Resend API (order confirmations via `send-order-confirmation`; contact form inquiries via `contact-send` Edge Function)
 **Payment:** Stripe (subscriptions via `create-subscription` Edge Function + Stripe Elements)
 **SSL:** CyberPanel handles Let's Encrypt SSL for Starter; Cloudways handles SSL for Business/Pro
 **Backups:** CyberPanel built-in for Starter; Cloudways built-in for Business/Pro
@@ -115,28 +115,29 @@ export PATH="/opt/homebrew/bin:$PATH" && npm run dev -- --port 5174
 
 ```
 src/
-├── App.jsx                 # Imports all 10 sections in order
+├── App.jsx                 # Imports all sections; manages contactOpen state (useState); passes onContactOpen prop to Navbar, Pricing, AdditionalServices, Footer; renders ContactModal
 ├── index.css               # Tailwind directives + custom utilities
 └── components/
-    ├── Navbar.jsx           # Sticky glassmorphism, logo img, mobile hamburger
+    ├── Navbar.jsx           # Sticky glassmorphism, logo img, mobile hamburger; "Contact Us" link (opens modal) + "Start a Project" CTA
     ├── Hero.jsx             # "Your Website, Hosted & Handled." — 4 stat badges (Uptime, Monitoring, Support, 30-Day Guarantee)
     ├── DomainSearch.jsx     # Domain availability widget — checks Namecheap via domain-check Edge Function; funnels to wizard via ?domain=&tld= URL params
     ├── TrustedBy.jsx        # Brand name row (placeholder names)
     ├── Services.jsx         # 8-card grid: hosting features (uptime, SSL, backups, email, etc.)
     ├── WhyNethost.jsx       # "Hosting That Works While You Work" — 2-col: copy left, 4 points right
     ├── Process.jsx          # 4-step horizontal timeline: Discovery → Design → Development → Launch
-    ├── Pricing.jsx          # 3 hosting tiers ($19/$49/$99), Business card highlighted
-    ├── AdditionalServices.jsx  # Muted 4-card row: Design, SEO, Marketing, Branding
+    ├── Pricing.jsx          # 3 hosting tiers ($19/$49/$99), Business card highlighted; "Need a custom plan? Let's talk." opens contact modal
+    ├── AdditionalServices.jsx  # Muted 4-card row: Design, SEO, Marketing, Branding; "Get in touch for a custom quote." opens contact modal
     ├── Testimonials.jsx     # 6 testimonial cards, 5-star ratings, avatar initials
     ├── CtaBanner.jsx        # Full-width CTA: "Ready to Build Your Online Presence?"
-    └── Footer.jsx           # 4-col: logo+contact, Services, Company, Start a Project
+    ├── Footer.jsx           # 4-col: logo+contact, Services, Company, Start a Project; "Contact" link in Company column opens modal
+    └── ContactModal.jsx     # Modal: Name, Email, Phone (optional), Message; POSTs to contact-send Edge Function; inline success state; triggered from Navbar, Footer, Pricing, AdditionalServices
 ```
 
 ### Section Order in App.jsx
-Navbar → Hero → DomainSearch → TrustedBy → Services → WhyNethost → Process → Pricing → AdditionalServices → Testimonials → CtaBanner → Footer
+Navbar → Hero → DomainSearch → TrustedBy → Services → WhyNethost → Process → Pricing → AdditionalServices → Testimonials → CtaBanner → Footer → ContactModal
 
 ### Nav Links (Navbar.jsx)
-`#features` (Services), `#process`, `#pricing`, `#testimonials`
+`#features` (Services), `#process`, `#pricing`, `#testimonials` + "Contact Us" (modal trigger)
 
 ---
 
@@ -162,8 +163,9 @@ app/src/
 │   └── WizardContext.jsx            # step, plan, domain, siteType, template, identity state; accepts initialData prop (merged over DEFAULTS at mount)
 └── components/
     ├── WizardShell.jsx              # Top bar (logo→nethost.co), 6-step progress pills, Back/Continue nav
+    ├── ContactModal.jsx             # Same contact form modal as marketing site; used by Step1Plan consultation link
     └── steps/
-        ├── Step1Plan.jsx            # 3 plan cards (Starter $19 / Business $49 / Pro $99), Business pre-selected
+        ├── Step1Plan.jsx            # 3 plan cards (Starter $19 / Business $49 / Pro $99), Business pre-selected; "Talk to us about white-glove setup" link opens ContactModal
         ├── Step2Domain.jsx          # Register tab (Namecheap availability check) or Connect tab
         ├── Step3SiteType.jsx        # 2×2 icon grid: Business / Portfolio / Blog / E-commerce
         ├── Step4Template.jsx        # 3×2 gradient thumbnail grid: Minimal/Bold/Corporate/Creative/Modern/Classic
@@ -182,6 +184,7 @@ app/src/
 | `domain-register` | Registers domain via Namecheap PHP proxy at api.nethost.co |
 | `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap |
 | `send-order-confirmation` | Sends branded HTML email via Resend with credentials |
+| `contact-send` | Receives `{ name, email, phone?, message }` from contact modal; sends notification email to hello@nethost.co via Resend with reply_to set to sender |
 | `create-portal-session` | Creates Stripe Customer Portal session (future customer dashboard feature) |
 
 ### VPS Proxy (api.nethost.co)
