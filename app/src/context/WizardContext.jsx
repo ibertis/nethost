@@ -2,19 +2,21 @@ import { createContext, useContext, useState } from 'react';
 
 const WizardContext = createContext(null);
 
-export function WizardProvider({ children, onGoToDashboard }) {
+const DEFAULTS = {
+  plan: 'Business',
+  domain: '',
+  tld: '.com',
+  domainOption: 'register', // 'register' | 'connect'
+  domainAvailable: null,
+  siteType: '',
+  template: '',
+  identity: { name: '', tagline: '', logoUrl: '', color: '#0ea5e9' },
+  provisionedCredentials: null, // set after Step 7 completes
+};
+
+export function WizardProvider({ children, onGoToDashboard, initialData = {} }) {
   const [step, setStep] = useState(1);
-  const [data, setData] = useState({
-    plan: 'Business',
-    domain: '',
-    tld: '.com',
-    domainOption: 'register', // 'register' | 'connect'
-    domainAvailable: null,
-    siteType: '',
-    template: '',
-    identity: { name: '', tagline: '', logoUrl: '', color: '#0ea5e9' },
-    provisionedCredentials: null, // set after Step 7 completes
-  });
+  const [data, setData] = useState({ ...DEFAULTS, ...initialData });
 
   const update = (patch) => setData((prev) => ({ ...prev, ...patch }));
   const updateIdentity = (patch) =>

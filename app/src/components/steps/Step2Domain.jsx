@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, CheckCircle2, XCircle, Globe, ChevronDown } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -13,7 +13,7 @@ const TLDS = [
 ];
 const MAX_FREE_DOMAIN_PRICE = 15.00; // domains above this are not eligible for the free first-year promotion
 
-// Retail renewal prices (displayed to user). Wholesale Porkbun cost is passed to the API unchanged.
+// Retail renewal prices (displayed to user). Namecheap wholesale price is returned from the domain-check API.
 const RETAIL_PRICES = {
   '.com': 14.99,
   '.co':  12.99,
@@ -32,6 +32,15 @@ export default function Step2Domain() {
   const [tldOpen, setTldOpen] = useState(false);
   const [existingDomain, setExistingDomain] = useState('');
   const [domainPrice, setDomainPrice] = useState(null);
+
+  // If domain was pre-filled from a URL param (marketing site funnel), show it as available immediately
+  useEffect(() => {
+    if (data.domain && data.domainAvailable === true && !result) {
+      setInput(data.domain.replace(data.tld, ''));
+      setTld(data.tld);
+      setResult('available');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAvailability = async () => {
     if (!input.trim()) return;

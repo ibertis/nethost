@@ -1,5 +1,6 @@
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import DomainSearch from './components/DomainSearch';
 import TrustedBy from './components/TrustedBy';
 import Services from './components/Services';
 import WhyNethost from './components/WhyNethost';
@@ -15,6 +16,7 @@ export default function App() {
     <div className="min-h-screen bg-[#050914]">
       <Navbar />
       <Hero />
+      <DomainSearch />
       <TrustedBy />
       <Services />
       <WhyNethost />

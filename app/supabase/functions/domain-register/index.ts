@@ -10,36 +10,25 @@ serve(async (req) => {
 
   try {
     const { domain } = await req.json();
-    if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
+    if (!domain) return new Response(
+      JSON.stringify({ error: 'domain required' }),
+      { headers: { ...CORS, 'Content-Type': 'application/json' } },
+    );
 
-    const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
-    const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
+    const proxyUrl    = Deno.env.get('PROXY_URL')!;
+    const proxySecret = Deno.env.get('PROXY_SECRET')!;
 
-    // Fetch current price fresh from Porkbun to avoid stale price mismatch
-    const checkRes = await fetch(`https://api.porkbun.com/api/json/v3/domain/checkDomain/${domain}`, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apikey, secretapikey }),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Proxy-Secret': proxySecret,
+      },
+      body: JSON.stringify({ domain }),
     });
-    const checkData = await checkRes.json();
-    if (checkData.status !== 'SUCCESS') throw new Error(`Price check failed: ${checkData.message}`);
 
-    const livePriceDollars = parseFloat(checkData.response?.price);
-    const cost = Math.round(livePriceDollars * 100);
-    if (!Number.isFinite(cost) || cost <= 0) {
-      throw new Error(`Invalid live price: ${checkData.response?.price}`);
-    }
-
-    const res = await fetch(`https://api.porkbun.com/api/json/v3/domain/create/${domain}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apikey, secretapikey, years: 1, cost, agreeToTerms: 'yes' }),
-    });
     const data = await res.json();
-
-    if (data.status !== 'SUCCESS') {
-      throw new Error(JSON.stringify(data));
-    }
+    if (data.error) throw new Error(data.error);
 
     return new Response(
       JSON.stringify({ success: true, domain }),
@@ -47,7 +36,6 @@ serve(async (req) => {
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    // Return 200 so supabase client populates data (not error) — actual message visible in UI
     return new Response(
       JSON.stringify({ error: message }),
       { headers: { ...CORS, 'Content-Type': 'application/json' } },

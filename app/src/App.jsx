@@ -57,8 +57,15 @@ function AppGate() {
     return <Account onBack={() => setView('dashboard')} />;
   }
 
+  const params      = new URLSearchParams(window.location.search);
+  const prefillName = params.get('domain');
+  const prefillTld  = params.get('tld') ?? '.com';
+  const initialData = prefillName
+    ? { domain: `${prefillName}${prefillTld}`, tld: prefillTld, domainAvailable: true }
+    : {};
+
   return (
-    <WizardProvider onGoToDashboard={() => setView('dashboard')}>
+    <WizardProvider onGoToDashboard={() => setView('dashboard')} initialData={initialData}>
       <WizardContent />
     </WizardProvider>
   );

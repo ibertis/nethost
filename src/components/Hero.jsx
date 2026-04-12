@@ -1,9 +1,10 @@
-import { ArrowRight, ShieldCheck, Clock, Headphones } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Clock, Headphones, BadgeCheck } from 'lucide-react';
 
 const STATS = [
   { icon: ShieldCheck, label: '99.9% Uptime', sub: 'SLA Guaranteed' },
   { icon: Clock, label: '24/7 Monitoring', sub: 'Always Watching' },
   { icon: Headphones, label: 'Real Human Support', sub: 'No Ticket Queues' },
+  { icon: BadgeCheck, label: '30-Day Guarantee', sub: 'Money-Back Promise' },
 ];
 
 export default function Hero() {

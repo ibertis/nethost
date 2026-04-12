@@ -47,6 +47,11 @@ function SiteCard({ order }) {
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planClass}`}>{order.plan}</span>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+            order.status === 'cancelled' ? 'bg-red-500/15 text-red-400' :
+            order.status === 'past_due'  ? 'bg-yellow-500/15 text-yellow-400' :
+                                           'bg-emerald-500/15 text-emerald-400'
+          }`}>{order.status === 'cancelled' ? 'Cancelled' : order.status === 'past_due' ? 'Past Due' : 'Active'}</span>
           <a
             href={order.wp_admin_url ?? `https://${order.domain}/wp-admin`}
             target="_blank"

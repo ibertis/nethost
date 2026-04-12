@@ -58,8 +58,17 @@ function PaymentForm({ price }) {
         'create-subscription',
         { body: { plan: data.plan, email: user?.email } },
       );
-      if (subError || subData?.error) {
-        throw new Error(subData?.error ?? subError?.message ?? 'Payment setup failed');
+      if (subError) {
+        // Extract actual error body from non-2xx response (Supabase SDK swallows it by default)
+        let msg = subError.message;
+        try {
+          const body = await subError.context?.json();
+          if (body?.error) msg = body.error;
+        } catch { /* ignore */ }
+        throw new Error(msg);
+      }
+      if (subData?.error) {
+        throw new Error(subData.error);
       }
 
       // Store customerId + subscriptionId in wizard state for use in Step 7 orders insert

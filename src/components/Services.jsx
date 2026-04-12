@@ -29,7 +29,7 @@ const FEATURES = [
     icon: Mail,
     title: 'Business Email Included',
     description:
-      'Professional email at your domain (you@yourbusiness.com) powered by Google Workspace or Zoho Mail.',
+      'Professional email at your domain (you@yourbusiness.com) — included with every hosting plan.',
   },
   {
     icon: Globe,

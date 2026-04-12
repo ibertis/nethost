@@ -10,40 +10,28 @@ serve(async (req) => {
 
   try {
     const { domain } = await req.json();
-    if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { status: 400, headers: CORS });
+    if (!domain) return new Response(JSON.stringify({ error: 'domain required' }), { headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-    const apikey       = Deno.env.get('PORKBUN_API_KEY')!;
-    const secretapikey = Deno.env.get('PORKBUN_API_SECRET')!;
+    const proxyUrl    = Deno.env.get('PROXY_URL_CHECK')!;
+    const proxySecret = Deno.env.get('PROXY_SECRET')!;
 
-    const res = await fetch(`https://api.porkbun.com/api/json/v3/domain/checkDomain/${domain}`, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apikey, secretapikey }),
+      headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
+      body: JSON.stringify({ domain }),
     });
     const data = await res.json();
-
-    if (data.status !== 'SUCCESS') {
-      throw new Error(data.message ?? `Porkbun error: ${data.status}`);
-    }
-
-    const available = data.response?.avail === 'yes';
-    const price     = data.response?.price ?? null;
-
-    const sld = domain.slice(0, domain.indexOf('.'));
-    const alternatives = available ? [] : [
-      `${sld}.co`,
-      `${sld}.net`,
-      `${sld}.io`,
-    ].filter((a) => a !== domain);
+    if (data.error) throw new Error(data.error);
 
     return new Response(
-      JSON.stringify({ available, price, alternatives }),
+      JSON.stringify(data),
       { headers: { ...CORS, 'Content-Type': 'application/json' } },
     );
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 500, headers: { ...CORS, 'Content-Type': 'application/json' } },
+      JSON.stringify({ error: message }),
+      { headers: { ...CORS, 'Content-Type': 'application/json' } },
     );
   }
 });

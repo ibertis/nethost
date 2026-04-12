@@ -9,6 +9,7 @@ create table if not exists orders (
   email                   text,
   stripe_customer_id      text,
   stripe_subscription_id  text,
+  status                  text default 'active',
   created_at              timestamptz default now()
 );
 

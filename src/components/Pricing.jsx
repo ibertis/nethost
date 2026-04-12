@@ -130,6 +130,7 @@ export default function Pricing() {
         <div className="mt-10 text-center">
           <p className="text-slate-500 text-sm">
             All plans include free SSL, daily backups, and Cloudflare CDN. &nbsp;
+            30-day money-back guarantee on all plans. &nbsp;
             <a href="mailto:hello@nethost.co" className="text-cyan-400 hover:underline">
               Need a custom plan? Let's talk.
             </a>
