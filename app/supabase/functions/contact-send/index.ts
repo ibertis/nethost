@@ -99,7 +99,7 @@ serve(async (req) => {
         from: 'NETHOST <hello@nethost.co>',
         to: ['hello@nethost.co'],
         reply_to: email,
-        subject: `New message from ${name} — nethost.co`,
+        subject: 'Website Inquiry Received: NETHOST.co',
         html,
       }),
     });
