@@ -29,7 +29,7 @@ export default function Footer({ onContactOpen }) {
             </a>
             <p className="text-slate-500 text-sm leading-relaxed mb-5">
               Fully managed web hosting for entrepreneurs and small businesses. We handle the
-              servers, SSL & uptime — you focus on running your business.
+              servers, SSL, and uptime — letting you focus on running your business.
             </p>
             <div className="flex flex-col gap-2">
               <a
