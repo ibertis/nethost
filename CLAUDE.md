@@ -119,7 +119,8 @@ src/
 ├── index.css               # Tailwind directives + custom utilities
 └── components/
     ├── Navbar.jsx           # Sticky glassmorphism, logo img, mobile hamburger
-    ├── Hero.jsx             # "Your Website, Hosted & Handled." — 3 stat badges
+    ├── Hero.jsx             # "Your Website, Hosted & Handled." — 4 stat badges (Uptime, Monitoring, Support, 30-Day Guarantee)
+    ├── DomainSearch.jsx     # Domain availability widget — checks Namecheap via domain-check Edge Function; funnels to wizard via ?domain=&tld= URL params
     ├── TrustedBy.jsx        # Brand name row (placeholder names)
     ├── Services.jsx         # 8-card grid: hosting features (uptime, SSL, backups, email, etc.)
     ├── WhyNethost.jsx       # "Hosting That Works While You Work" — 2-col: copy left, 4 points right
@@ -132,7 +133,7 @@ src/
 ```
 
 ### Section Order in App.jsx
-Navbar → Hero → TrustedBy → Services → WhyNethost → Process → Pricing → AdditionalServices → Testimonials → CtaBanner → Footer
+Navbar → Hero → DomainSearch → TrustedBy → Services → WhyNethost → Process → Pricing → AdditionalServices → Testimonials → CtaBanner → Footer
 
 ### Nav Links (Navbar.jsx)
 `#features` (Services), `#process`, `#pricing`, `#testimonials`
@@ -155,10 +156,10 @@ Full onboarding wizard — guides a new customer from plan selection through dom
 
 ```
 app/src/
-├── App.jsx                          # WizardProvider wraps WizardContent; STEPS map 1–8
+├── App.jsx                          # WizardProvider wraps WizardContent; STEPS map 1–8; reads ?domain=&tld= URL params and passes as initialData to WizardProvider
 ├── index.css                        # Tailwind + .input-field, .card-select utilities
 ├── context/
-│   └── WizardContext.jsx            # step, plan, domain, siteType, template, identity state
+│   └── WizardContext.jsx            # step, plan, domain, siteType, template, identity state; accepts initialData prop (merged over DEFAULTS at mount)
 └── components/
     ├── WizardShell.jsx              # Top bar (logo→nethost.co), 6-step progress pills, Back/Continue nav
     └── steps/
@@ -210,6 +211,7 @@ NAMECHEAP_API_USER
 NAMECHEAP_API_KEY
 PROXY_URL_CYBERPANEL     # e.g. https://api.nethost.co/provision-cyberpanel.php
 PROXY_URL                # e.g. https://api.nethost.co/register-domain.php (used by domain-register)
+PROXY_URL_CHECK          # e.g. https://api.nethost.co/check-domain.php (used by domain-check)
 PROXY_SECRET             # Must match PROXY_SECRET in nethost-secrets.php on VPS
 RESEND_API_KEY
 ```
@@ -270,10 +272,9 @@ Reads `data.provisionedCredentials` from WizardContext (populated by Step 7). Fa
 
 ## Pending / Future Work
 
-- [ ] Verify `orders` table exists in Supabase (Step7 inserts to it — schema migration needed if not)
 - [ ] Verify `PROXY_URL` secret is set (for `domain-register` function; separate from `PROXY_URL_CYBERPANEL`)
 - [ ] Test Cloudways provisioning end-to-end for Business/Pro plans
 - [ ] Add auth gate before Step 1 (wizard calls `supabase.auth.getUser()` in Step 6; unauthenticated users will fail at payment)
-- [ ] Build customer dashboard (post-provisioning) at app.nethost.co — `create-portal-session` Edge Function is ready for billing management
-- [ ] Connect "View Hosting Plans" / "Get Started" CTAs on marketing site → `app.nethost.co`
+- [ ] Customer dashboard at app.nethost.co — `create-portal-session` Edge Function is deployed; Dashboard.jsx shows subscription status badges and "Manage Subscription" button (Stripe cancel-only portal, no plan switching)
+- [ ] Dedicated IP as a Pro differentiator — requires Cloudways provisioning changes (separate server per customer); not yet in provision-hosting Edge Function
 - [ ] Add `.gitignore` to both projects if pushing to version control

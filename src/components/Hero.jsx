@@ -13,6 +13,24 @@ export default function Hero() {
       {/* Background grid */}
       <div className="absolute inset-0 bg-grid opacity-100 pointer-events-none" />
 
+      {/* Aurora animation layer */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className={[
+          '[--dark-gradient:repeating-linear-gradient(100deg,var(--black)_0%,var(--black)_7%,var(--transparent)_10%,var(--transparent)_12%,var(--black)_16%)]',
+          '[--aurora:repeating-linear-gradient(100deg,var(--cyan-500)_10%,var(--blue-400)_15%,var(--cyan-300)_20%,var(--blue-600)_25%,var(--cyan-400)_30%)]',
+          '[background-image:var(--dark-gradient),var(--aurora)]',
+          '[background-size:300%,_200%]',
+          '[background-position:50%_50%,50%_50%]',
+          'filter blur-[10px] invert-0',
+          'after:content-[""] after:absolute after:inset-0',
+          'after:[background-image:var(--dark-gradient),var(--aurora)]',
+          'after:[background-size:200%,_100%]',
+          'after:animate-aurora after:[background-attachment:fixed] after:mix-blend-difference',
+          'absolute -inset-[10px] opacity-50 will-change-transform',
+          '[mask-image:radial-gradient(ellipse_at_100%_0%,black_10%,var(--transparent)_70%)]',
+        ].join(' ')} />
+      </div>
+
       {/* Radial glow */}
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
 
