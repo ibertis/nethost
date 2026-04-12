@@ -28,7 +28,7 @@ export default function App() {
       <Pricing onContactOpen={() => setContactOpen(true)} />
       <AdditionalServices onContactOpen={() => setContactOpen(true)} />
       <Testimonials />
-      <CtaBanner />
+      <CtaBanner onContactOpen={() => setContactOpen(true)} />
       <Footer onContactOpen={() => setContactOpen(true)} />
       <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
     </div>

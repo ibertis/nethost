@@ -1,6 +1,6 @@
 import { ArrowRight, Calendar } from 'lucide-react';
 
-export default function CtaBanner() {
+export default function CtaBanner({ onContactOpen }) {
   return (
     <section className="py-24 bg-[#07091a] relative overflow-hidden">
       {/* Background glow */}
@@ -26,12 +26,12 @@ export default function CtaBanner() {
             <Calendar size={16} />
             Schedule a Free Call
           </a>
-          <a
-            href="mailto:hello@nethost.co"
+          <button
+            onClick={onContactOpen}
             className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/10 text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white/10 transition text-sm"
           >
             hello@nethost.co <ArrowRight size={16} />
-          </a>
+          </button>
         </div>
       </div>
     </section>
