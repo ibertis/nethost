@@ -57,14 +57,16 @@ export default function DomainSearch() {
 
         {/* Search bar */}
         <div className="flex items-stretch gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => { setInput(e.target.value); setResult(null); }}
-            onKeyDown={(e) => e.key === 'Enter' && check()}
-            placeholder="yourname"
-            className="flex-1 bg-white/[0.05] border border-white/10 text-white placeholder-slate-600 rounded-xl px-4 py-3 text-sm outline-none focus:border-cyan-500/50 transition min-w-0"
-          />
+          <div className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => { setInput(e.target.value); setResult(null); }}
+              onKeyDown={(e) => e.key === 'Enter' && check()}
+              placeholder="yourname"
+              className="w-full bg-white/[0.05] border border-white/10 text-white placeholder-slate-600 rounded-xl px-4 py-3 text-sm outline-none focus:border-cyan-500/50 transition domain-input-glow"
+            />
+          </div>
 
           {/* TLD picker */}
           <div className="relative">
