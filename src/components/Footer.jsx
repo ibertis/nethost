@@ -2,17 +2,18 @@ import { Mail, Phone, Globe } from 'lucide-react';
 
 const LINKS = {
   Services: [
-    { label: 'Web Hosting', href: '#services' },
-    { label: 'Website Design', href: '#services' },
-    { label: 'SEO Optimization', href: '#services' },
-    { label: 'Digital Marketing', href: '#services' },
-    { label: 'Branding & Identity', href: '#services' },
+    { label: 'Web Hosting', href: '/#services' },
+    { label: 'Website Design', href: '/#services' },
+    { label: 'SEO Optimization', href: '/#services' },
+    { label: 'Digital Marketing', href: '/#services' },
+    { label: 'Branding & Identity', href: '/#services' },
   ],
   Company: [
-    { label: 'About', href: '#' },
-    { label: 'Process', href: '#process' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'Testimonials', href: '#testimonials' },
+    { label: 'About', href: '/' },
+    { label: 'Process', href: '/#process' },
+    { label: 'Pricing', href: '/#pricing' },
+    { label: 'Testimonials', href: '/#testimonials' },
+    { label: 'Resources', href: '/resources' },
     { label: 'Contact', href: null },
   ],
 };
@@ -58,7 +59,7 @@ export default function Footer({ onContactOpen }) {
           {/* Link columns */}
           {Object.entries(LINKS).map(([heading, items]) => (
             <div key={heading}>
-              <h4 className="text-white font-semibold text-sm mb-4">{heading}</h4>
+              <h3 className="text-white font-semibold text-sm mb-4">{heading}</h3>
               <ul className="flex flex-col gap-2.5">
                 {items.map((item) => (
                   <li key={item.label}>
@@ -85,7 +86,7 @@ export default function Footer({ onContactOpen }) {
 
           {/* Contact CTA */}
           <div>
-            <h4 className="text-white font-semibold text-sm mb-4">Start a Project</h4>
+            <h3 className="text-white font-semibold text-sm mb-4">Start a Project</h3>
             <p className="text-slate-500 text-sm leading-relaxed mb-4">
               Ready to get online? Let's build something great together.
             </p>

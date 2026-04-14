@@ -58,7 +58,9 @@ export default function DomainSearch() {
         {/* Search bar */}
         <div className="flex items-stretch gap-2">
           <div className="relative flex-1 min-w-0">
+            <label htmlFor="domain-search" className="sr-only">Domain name</label>
             <input
+              id="domain-search"
               type="text"
               value={input}
               onChange={(e) => { setInput(e.target.value); setResult(null); }}
