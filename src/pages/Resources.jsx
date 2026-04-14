@@ -72,8 +72,11 @@ export default function Toolkit({ onContactOpen }) {
           <h2 className="sr-only">Partner Tools</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {TOOLS.map((tool) => (
-              <div
+              <a
                 key={tool.name}
+                href={tool.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-6 flex flex-col gap-4 card-hover"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -83,15 +86,10 @@ export default function Toolkit({ onContactOpen }) {
                   >
                     {tool.initials}
                   </div>
-                  {/* Visit link */}
-                  <a
-                    href={tool.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white border border-white/10 hover:border-white/20 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-full transition shrink-0"
-                  >
+                  {/* Visit label */}
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 border border-white/10 bg-white/[0.04] px-3 py-1.5 rounded-full shrink-0">
                     Visit <ArrowUpRight size={12} />
-                  </a>
+                  </span>
                 </div>
 
                 <div>
@@ -99,7 +97,7 @@ export default function Toolkit({ onContactOpen }) {
                   <p className={`text-xs font-medium mb-3 ${tool.text}`}>{tool.display}</p>
                   <p className="text-slate-400 text-sm leading-relaxed">{tool.description}</p>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
