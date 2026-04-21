@@ -14,6 +14,7 @@ import CtaBanner from './components/CtaBanner';
 import Footer from './components/Footer';
 import ContactModal from './components/ContactModal';
 import Resources from './pages/Resources';
+import NotFound from './pages/NotFound';
 
 function HomePage({ onContactOpen }) {
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/resources" element={<Resources onContactOpen={() => setContactOpen(true)} />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <ContactModal isOpen={contactOpen} onClose={() => setContactOpen(false)} />
     </div>

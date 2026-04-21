@@ -25,7 +25,7 @@ export default function Footer({ onContactOpen }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <a href="#" className="flex items-center mb-3">
+            <a href="/" className="flex items-center mb-3">
               <img src="/nethost-logo.png" alt="NETHOST" className="h-6 w-auto" />
             </a>
             <p className="text-slate-500 text-sm leading-relaxed mb-5">
