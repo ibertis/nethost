@@ -7,6 +7,7 @@ const DEFAULTS = {
   domain: '',
   tld: '.com',
   domainOption: 'register', // 'register' | 'connect'
+  dnsMethod: 'nameservers', // 'nameservers' | 'records' — only relevant when domainOption === 'connect'
   domainAvailable: null,
   siteType: '',
   template: '',

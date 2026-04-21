@@ -221,7 +221,7 @@ export default function Step2Domain() {
             <label className="block text-slate-400 text-xs font-semibold uppercase tracking-widest mb-2">
               Your existing domain
             </label>
-            <div className="flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl overflow-hidden focus-within:border-cyan-500 transition mb-4">
+            <div className="flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl overflow-hidden focus-within:border-cyan-500 transition mb-6">
               <Globe size={15} className="text-slate-500 ml-4 shrink-0" />
               <input
                 className="flex-1 bg-transparent text-white placeholder-slate-600 px-3 py-3 text-sm outline-none"
@@ -230,12 +230,51 @@ export default function Step2Domain() {
                 onChange={(e) => { setExistingDomain(e.target.value); update({ domain: e.target.value, domainAvailable: true, domainOption: 'connect' }); }}
               />
             </div>
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-xs text-slate-500 leading-relaxed">
-              <p className="font-semibold text-slate-400 mb-1">DNS Setup (after checkout)</p>
-              Point your domain's nameservers to:<br />
-              <span className="text-cyan-500 font-mono">ns1.nethost.co</span> and <span className="text-cyan-500 font-mono">ns2.nethost.co</span>.<br />
-              We'll walk you through this after your site is provisioned.
+
+            {/* DNS method selection */}
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-3">
+              How would you like to connect it?
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                {
+                  value: 'nameservers',
+                  title: 'Nameservers',
+                  badge: 'Recommended',
+                  desc: 'NETHOST manages your DNS — the simplest option.',
+                },
+                {
+                  value: 'records',
+                  title: 'DNS Records',
+                  badge: 'Keep your DNS',
+                  desc: 'Add a few records at your registrar and stay in control.',
+                },
+              ].map(({ value, title, badge, desc }) => {
+                const selected = data.dnsMethod === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => update({ dnsMethod: value })}
+                    className={`text-left rounded-xl border p-4 transition-all ${
+                      selected
+                        ? 'border-cyan-500/50 bg-cyan-500/[0.07]'
+                        : 'border-white/[0.08] bg-white/[0.03] hover:border-white/20'
+                    }`}
+                  >
+                    <p className={`text-sm font-bold mb-0.5 ${selected ? 'text-white' : 'text-slate-300'}`}>
+                      {title}
+                    </p>
+                    <p className={`text-xs font-semibold mb-2 ${selected ? 'text-cyan-400' : 'text-slate-500'}`}>
+                      {badge}
+                    </p>
+                    <p className="text-slate-500 text-xs leading-relaxed">{desc}</p>
+                  </button>
+                );
+              })}
             </div>
+            <p className="text-slate-600 text-xs text-center">
+              You'll receive the exact values to enter after checkout.
+            </p>
           </div>
         )}
       </div>

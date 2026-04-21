@@ -99,6 +99,7 @@ export default function Step7Provisioning() {
           username:   creds.username ?? 'admin',
           password:   creds.password,
           email:      creds.email ?? `hello@${data.domain}`,
+          serverIp:   creds.serverIp ?? null,
         };
 
         // Store real credentials in wizard state

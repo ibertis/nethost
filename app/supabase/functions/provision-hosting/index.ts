@@ -95,6 +95,7 @@ async function provisionCloudways(domain: string, siteName: string) {
     username:   wpUser,
     password:   wpPass,
     email:      `hello@${domain}`,
+    serverIp:   serverIp,
   };
 }
 
@@ -113,7 +114,7 @@ async function provisionCyberPanel(domain: string) {
 
   await setDnsRecords(domain, '76.13.118.227');
 
-  return data;
+  return { ...data, serverIp: '76.13.118.227' };
 }
 
 // --- Main handler ---
