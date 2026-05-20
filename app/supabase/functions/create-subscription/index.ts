@@ -5,10 +5,16 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PRICE_IDS: Record<string, string> = {
-  Starter:  Deno.env.get('STRIPE_PRICE_STARTER')  ?? '',
-  Business: Deno.env.get('STRIPE_PRICE_BUSINESS') ?? '',
-  Pro:      Deno.env.get('STRIPE_PRICE_PRO')       ?? '',
+const LIVE_PRICE_IDS: Record<string, string> = {
+  Starter:  Deno.env.get('STRIPE_PRICE_STARTER')       ?? '',
+  Business: Deno.env.get('STRIPE_PRICE_BUSINESS')      ?? '',
+  Pro:      Deno.env.get('STRIPE_PRICE_PRO')            ?? '',
+};
+
+const TEST_PRICE_IDS: Record<string, string> = {
+  Starter:  Deno.env.get('STRIPE_PRICE_STARTER_TEST')  ?? '',
+  Business: Deno.env.get('STRIPE_PRICE_BUSINESS_TEST') ?? '',
+  Pro:      Deno.env.get('STRIPE_PRICE_PRO_TEST')      ?? '',
 };
 
 async function getOrCreateCustomer(secretKey: string, email: string): Promise<string> {
@@ -39,7 +45,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { plan, email } = await req.json();
+    const { plan, email, testMode } = await req.json();
+
+    const PRICE_IDS = testMode ? TEST_PRICE_IDS : LIVE_PRICE_IDS;
 
     if (!plan || !PRICE_IDS[plan]) return err('Valid plan required');
 
@@ -47,7 +55,9 @@ serve(async (req) => {
     if (!priceId) return err(`Price ID not configured for plan: ${plan}`);
     if (!email)   return err('Email required');
 
-    const secretKey = Deno.env.get('STRIPE_SECRET_KEY')!;
+    const secretKey = testMode
+      ? (Deno.env.get('STRIPE_SECRET_KEY_TEST') ?? Deno.env.get('STRIPE_SECRET_KEY')!)
+      : Deno.env.get('STRIPE_SECRET_KEY')!;
 
     const customerId = await getOrCreateCustomer(secretKey, email);
 

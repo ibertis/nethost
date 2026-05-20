@@ -56,7 +56,7 @@ function PaymentForm({ price }) {
       // 1. Create Subscription server-side (also creates/retrieves Stripe Customer)
       const { data: subData, error: subError } = await supabase.functions.invoke(
         'create-subscription',
-        { body: { plan: data.plan, email: user?.email } },
+        { body: { plan: data.plan, email: user?.email, testMode: import.meta.env.VITE_TEST_MODE === 'true' } },
       );
       if (subError) {
         // Extract actual error body from non-2xx response (Supabase SDK swallows it by default)
