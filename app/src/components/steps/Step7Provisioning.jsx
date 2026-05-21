@@ -115,6 +115,7 @@ export default function Step7Provisioning() {
             domain:                   provisionedCredentials.domain,
             wp_admin_url:             provisionedCredentials.wpAdminUrl,
             username:                 provisionedCredentials.username,
+            password:                 provisionedCredentials.password ?? null,
             email:                    provisionedCredentials.email,
             stripe_customer_id:       data.stripeCustomerId    ?? null,
             stripe_subscription_id:   data.stripeSubscriptionId ?? null,

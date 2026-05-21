@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Globe, Monitor, Palette, Server, User, Lock } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useWizard } from '../../context/WizardContext';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -9,15 +9,23 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const PRICES = { Starter: 19, Business: 49, Pro: 99 };
 
-const CARD_ELEMENT_OPTIONS = {
-  style: {
-    base: {
-      color: '#f1f5f9',
-      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-      fontSize: '14px',
-      '::placeholder': { color: '#475569' },
+const ELEMENTS_OPTIONS = {
+  appearance: {
+    theme: 'night',
+    variables: {
+      colorPrimary:        '#06b6d4',
+      colorBackground:     '#0f172a',
+      colorText:           '#f1f5f9',
+      colorDanger:         '#f87171',
+      fontFamily:          'ui-sans-serif, system-ui, sans-serif',
+      borderRadius:        '12px',
+      spacingUnit:         '4px',
     },
-    invalid: { color: '#f87171' },
+    rules: {
+      '.Input': { border: '1px solid rgba(255,255,255,0.09)', backgroundColor: 'rgba(255,255,255,0.05)' },
+      '.Input:focus': { border: '1px solid #06b6d4', boxShadow: '0 0 0 3px rgba(6,182,212,0.12)' },
+      '.Label': { color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' },
+    },
   },
 };
 
@@ -35,59 +43,28 @@ function Row({ icon: Icon, label, value }) {
   );
 }
 
-function PaymentForm({ price }) {
-  const stripe     = useStripe();
-  const elements   = useElements();
-  const { data, setStep, update } = useWizard();
-  const [paying, setPaying]   = useState(false);
+function PaymentForm({ price, onSuccess }) {
+  const stripe   = useStripe();
+  const elements = useElements();
+  const [paying, setPaying]     = useState(false);
   const [cardError, setCardError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!stripe || !elements) return;
-
     setPaying(true);
     setCardError('');
 
-    try {
-      // 0. Get user email to attach to Stripe Customer
-      const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    });
 
-      // 1. Create Subscription server-side (also creates/retrieves Stripe Customer)
-      const { data: subData, error: subError } = await supabase.functions.invoke(
-        'create-subscription',
-        { body: { plan: data.plan, email: user?.email, testMode: import.meta.env.VITE_TEST_MODE === 'true' } },
-      );
-      if (subError) {
-        // Extract actual error body from non-2xx response (Supabase SDK swallows it by default)
-        let msg = subError.message;
-        try {
-          const body = await subError.context?.json();
-          if (body?.error) msg = body.error;
-        } catch { /* ignore */ }
-        throw new Error(msg);
-      }
-      if (subData?.error) {
-        throw new Error(subData.error);
-      }
-
-      // Store customerId + subscriptionId in wizard state for use in Step 7 orders insert
-      update({
-        stripeCustomerId:    subData.customerId,
-        stripeSubscriptionId: subData.subscriptionId,
-      });
-
-      // 2. Confirm card payment client-side (activates the subscription)
-      const { error: stripeError } = await stripe.confirmCardPayment(subData.clientSecret, {
-        payment_method: { card: elements.getElement(CardElement) },
-      });
-      if (stripeError) throw new Error(stripeError.message);
-
-      // 3. Advance to provisioning
-      setStep(7);
-    } catch (err) {
-      setCardError(err.message ?? 'Payment failed. Please try again.');
+    if (error) {
+      setCardError(error.message ?? 'Payment failed. Please try again.');
       setPaying(false);
+    } else {
+      onSuccess();
     }
   };
 
@@ -95,13 +72,11 @@ function PaymentForm({ price }) {
     <form onSubmit={handleSubmit}>
       <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 mb-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Payment</p>
-        <div className="bg-white/[0.05] border border-white/[0.09] rounded-xl px-4 py-3.5 focus-within:border-cyan-500 focus-within:shadow-[0_0_0_3px_rgba(14,165,233,0.12)] transition">
-          <CardElement options={CARD_ELEMENT_OPTIONS} />
-        </div>
+        <PaymentElement />
         {cardError && (
-          <p className="text-red-400 text-xs mt-2">{cardError}</p>
+          <p className="text-red-400 text-xs mt-3">{cardError}</p>
         )}
-        <p className="text-slate-600 text-xs mt-3 text-center flex items-center justify-center gap-1">
+        <p className="text-slate-600 text-xs mt-4 text-center flex items-center justify-center gap-1">
           <Lock size={10} /> Secured by Stripe. Cancel anytime.
         </p>
       </div>
@@ -125,8 +100,38 @@ function PaymentForm({ price }) {
 }
 
 export default function Step6Review() {
-  const { data } = useWizard();
+  const { data, setStep, update } = useWizard();
   const price = PRICES[data.plan] || 49;
+  const [clientSecret, setClientSecret] = useState(data.stripeClientSecret ?? '');
+  const [initError, setInitError]       = useState('');
+
+  useEffect(() => {
+    if (clientSecret) return; // already fetched on a prior render of this step
+    const init = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: subData, error: subError } = await supabase.functions.invoke(
+          'create-subscription',
+          { body: { plan: data.plan, email: user?.email, testMode: import.meta.env.VITE_TEST_MODE === 'true' } },
+        );
+        if (subError) {
+          let msg = subError.message;
+          try { const b = await subError.context?.json(); if (b?.error) msg = b.error; } catch { /* ignore */ }
+          throw new Error(msg);
+        }
+        if (subData?.error) throw new Error(subData.error);
+        update({
+          stripeClientSecret:   subData.clientSecret,
+          stripeCustomerId:     subData.customerId,
+          stripeSubscriptionId: subData.subscriptionId,
+        });
+        setClientSecret(subData.clientSecret);
+      } catch (err) {
+        setInitError(err.message ?? 'Failed to initialize payment. Please try again.');
+      }
+    };
+    init();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
@@ -166,10 +171,20 @@ export default function Step6Review() {
           </div>
         </div>
 
-        {/* Stripe payment form */}
-        <Elements stripe={stripePromise}>
-          <PaymentForm price={price} />
-        </Elements>
+        {/* Stripe PaymentElement */}
+        {initError ? (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 text-center">
+            <p className="text-red-400 text-sm">{initError}</p>
+          </div>
+        ) : !clientSecret ? (
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 flex items-center justify-center">
+            <span className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <Elements stripe={stripePromise} options={{ clientSecret, ...ELEMENTS_OPTIONS }}>
+            <PaymentForm price={price} onSuccess={() => setStep(7)} />
+          </Elements>
+        )}
       </div>
     </div>
   );

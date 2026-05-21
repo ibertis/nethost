@@ -71,7 +71,7 @@ async function provisionCloudways(domain: string, siteName: string) {
   const server = servers[0];
 
   // Step 3: Create WordPress application
-  const wpUser = 'admin';
+  const wpUser = 'nh' + domain.split('.')[0].replace(/[^a-z0-9]/g, '').slice(0, 10);
   const wpPass = generatePassword();
   const appRes = await fetch('https://api.cloudways.com/api/v1/app', {
     method: 'POST',
