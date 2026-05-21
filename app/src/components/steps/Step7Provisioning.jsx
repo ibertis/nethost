@@ -110,28 +110,28 @@ export default function Step7Provisioning() {
         if (user) {
           // Non-blocking — table may not exist yet; don't let this fail the wizard
           supabase.from('orders').insert({
-            user_id:            user.id,
-            plan:               data.plan,
-            domain:             provisionedCredentials.domain,
-            wp_admin_url:       provisionedCredentials.wpAdminUrl,
-            username:           provisionedCredentials.username,
-            password:           provisionedCredentials.password,
-            email:              provisionedCredentials.email,
+            user_id:                  user.id,
+            plan:                     data.plan,
+            domain:                   provisionedCredentials.domain,
+            wp_admin_url:             provisionedCredentials.wpAdminUrl,
+            username:                 provisionedCredentials.username,
+            email:                    provisionedCredentials.email,
             stripe_customer_id:       data.stripeCustomerId    ?? null,
             stripe_subscription_id:   data.stripeSubscriptionId ?? null,
           }).then(() => {}).catch(() => {});
 
-          // Fire-and-forget confirmation email — don't block on failure
-          supabase.functions.invoke('send-order-confirmation', {
-            body: {
-              to:         user.email,
-              domain:     provisionedCredentials.domain,
-              plan:       data.plan,
-              wpAdminUrl: provisionedCredentials.wpAdminUrl,
-              username:   provisionedCredentials.username,
-              password:   provisionedCredentials.password,
-            },
-          });
+          // Fire-and-forget confirmation email — skip in test mode
+          if (!TEST_MODE) {
+            supabase.functions.invoke('send-order-confirmation', {
+              body: {
+                to:         user.email,
+                domain:     provisionedCredentials.domain,
+                plan:       data.plan,
+                wpAdminUrl: provisionedCredentials.wpAdminUrl,
+                username:   provisionedCredentials.username,
+              },
+            });
+          }
         }
 
         await delay(600);

@@ -5,7 +5,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function buildHtml(plan: string, domain: string, wpAdminUrl: string, username: string, password: string): string {
+function buildHtml(plan: string, domain: string, wpAdminUrl: string, username: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,12 +68,6 @@ function buildHtml(plan: string, domain: string, wpAdminUrl: string, username: s
                     <p style="margin:0;color:#ffffff;font-size:14px;font-family:monospace;">${username}</p>
                   </td>
                 </tr>
-                <tr>
-                  <td style="padding:14px 20px;">
-                    <p style="margin:0 0 2px;color:#64748b;font-size:11px;">Temporary Password</p>
-                    <p style="margin:0;color:#ffffff;font-size:14px;font-family:monospace;">${password}</p>
-                  </td>
-                </tr>
               </table>
             </td>
           </tr>
@@ -94,7 +88,7 @@ function buildHtml(plan: string, domain: string, wpAdminUrl: string, username: s
                 <tr>
                   <td>
                     <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">
-                      🔒 <strong style="color:#94a3b8;">Save these credentials</strong> — change your password after your first login. These are your temporary access details.
+                      🔒 <strong style="color:#94a3b8;">Your temporary login credentials</strong> were displayed during setup. Visit your WordPress admin and change your password after your first login.
                     </p>
                   </td>
                 </tr>
@@ -133,7 +127,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { to, domain, plan, wpAdminUrl, username, password } = await req.json();
+    const { to, domain, plan, wpAdminUrl, username } = await req.json();
     if (!to || !domain) {
       return new Response(JSON.stringify({ error: 'to and domain required' }), { status: 400, headers: CORS });
     }
@@ -150,7 +144,7 @@ serve(async (req) => {
         from: 'NETHOST <hello@nethost.co>',
         to: [to],
         subject: `Your NETHOST website is live — ${domain}`,
-        html: buildHtml(plan, domain, wpAdminUrl ?? `https://${domain}/wp-admin`, username ?? 'admin', password ?? ''),
+        html: buildHtml(plan, domain, wpAdminUrl ?? `https://${domain}/wp-admin`, username ?? 'admin'),
       }),
     });
 
