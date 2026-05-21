@@ -72,7 +72,7 @@ function PaymentForm({ price, onSuccess }) {
     <form onSubmit={handleSubmit}>
       <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 mb-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Payment</p>
-        <PaymentElement />
+        <PaymentElement options={{ wallets: { applePay: 'auto', googlePay: 'auto', link: 'never' } }} />
         {cardError && (
           <p className="text-red-400 text-xs mt-3">{cardError}</p>
         )}
