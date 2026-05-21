@@ -109,7 +109,12 @@ async function provisionCyberPanel(domain: string) {
     headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
     body: JSON.stringify({ domain }),
   });
-  const data = await res.json();
+  const raw = await res.text();
+  if (!raw) throw new Error(`PHP proxy empty response — HTTP ${res.status}`);
+  let data: any;
+  try { data = JSON.parse(raw); } catch {
+    throw new Error(`PHP proxy non-JSON (HTTP ${res.status}): ${raw.slice(0, 400)}`);
+  }
   if (data.error) throw new Error(data.error);
 
   await setDnsRecords(domain, '76.13.118.227');

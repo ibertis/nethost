@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, Plus, LogOut, User } from 'lucide-react';
+import { Copy, ExternalLink, Plus, LogOut, User, Clock } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
@@ -36,6 +36,8 @@ function CopyField({ label, value, mono }) {
 function SiteCard({ order }) {
   const planClass = PLAN_COLORS[order.plan] ?? PLAN_COLORS.Business;
   const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const hoursSince = (Date.now() - new Date(order.created_at)) / 3_600_000;
+  const dnsLikelyPending = hoursSince < 48;
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5">
@@ -62,6 +64,25 @@ function SiteCard({ order }) {
           </a>
         </div>
       </div>
+
+      {/* DNS propagation notice */}
+      {dnsLikelyPending && (
+        <div className="flex items-start gap-3 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
+          <Clock size={14} className="text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-amber-300 text-xs font-semibold mb-0.5">DNS propagating — up to 48 hours</p>
+            <p className="text-amber-400/70 text-xs leading-relaxed">Your WordPress site is installed and ready on our servers. Your domain may not resolve yet while DNS changes propagate across the internet.</p>
+          </div>
+          <a
+            href={`https://dnschecker.org/#A/${order.domain}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-amber-400 hover:text-amber-300 font-semibold whitespace-nowrap transition shrink-0 mt-0.5"
+          >
+            Check DNS →
+          </a>
+        </div>
+      )}
 
       {/* Credentials */}
       <div className="bg-black/20 rounded-xl px-4 py-1">
