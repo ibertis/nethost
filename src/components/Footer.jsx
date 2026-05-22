@@ -15,6 +15,7 @@ const LINKS = {
     { label: 'Testimonials', href: '/#testimonials' },
     { label: 'Resources', href: '/resources' },
     { label: 'Contact', href: null },
+    { label: 'My Account', href: 'https://app.nethost.co' },
   ],
 };
 
