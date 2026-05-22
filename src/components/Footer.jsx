@@ -15,7 +15,6 @@ const LINKS = {
     { label: 'Testimonials', href: '/#testimonials' },
     { label: 'Resources', href: '/resources' },
     { label: 'Contact', href: null },
-    { label: 'My Account', href: 'https://app.nethost.co' },
   ],
 };
 
@@ -96,6 +95,12 @@ export default function Footer({ onContactOpen }) {
               className="inline-flex items-center justify-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition"
             >
               Get Started
+            </a>
+            <a
+              href="https://app.nethost.co"
+              className="block mt-3 text-xs text-slate-600 hover:text-slate-400 transition-colors"
+            >
+              Already a customer? My Account →
             </a>
           </div>
         </div>
