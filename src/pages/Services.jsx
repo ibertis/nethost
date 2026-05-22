@@ -188,7 +188,7 @@ export default function ServicesPage({ onContactOpen }) {
           </h1>
 
           {/* Subtext */}
-          <p className="text-lg md:text-xl text-slate-400 leading-relaxed mb-10 max-w-2xl">
+          <p className="text-lg md:text-xl text-slate-400 leading-relaxed mb-10 max-w-3xl">
             Beyond hosting, NETHOST offers a full suite of digital services — brand identity,
             custom websites, performance marketing, and AI-powered automation.
             One partner. Everything you need to compete and grow.
