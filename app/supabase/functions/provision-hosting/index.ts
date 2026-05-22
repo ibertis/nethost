@@ -161,6 +161,22 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'plan and domain required' }), { status: 400, headers: CORS });
     }
 
+    // Verify the Stripe subscription is in a payable state before provisioning
+    if (stripeSubscriptionId) {
+      const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')!;
+      const subRes = await fetch(
+        `https://api.stripe.com/v1/subscriptions/${stripeSubscriptionId}`,
+        { headers: { 'Authorization': `Bearer ${stripeKey}` } },
+      );
+      const sub = await subRes.json();
+      if (!['active', 'trialing', 'incomplete'].includes(sub.status)) {
+        return new Response(
+          JSON.stringify({ error: 'No active subscription found. Please complete payment before provisioning.' }),
+          { status: 402, headers: CORS },
+        );
+      }
+    }
+
     // Service-role client — used for order tracking; bypasses RLS
     const svcSupabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
