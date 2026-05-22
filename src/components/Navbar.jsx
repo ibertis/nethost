@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
-const NAV_LINKS = [
-  { label: 'Services', href: '/#services' },
-  { label: 'Process', href: '/#process' },
-  { label: 'Pricing', href: '/#pricing' },
-  { label: 'Testimonials', href: '/#testimonials' },
-  { label: 'Resources', href: '/resources' },
+const HOME_LINKS = [
+  { label: 'Services',      href: '/#services' },
+  { label: 'Process',       href: '/#process' },
+  { label: 'Pricing',       href: '/#pricing' },
+  { label: 'Testimonials',  href: '/#testimonials' },
+  { label: 'Resources',     href: '/resources' },
+];
+
+const SERVICES_LINKS = [
+  { label: 'Branding',         href: '#branding' },
+  { label: 'Web Design',       href: '#web' },
+  { label: 'Marketing',        href: '#marketing' },
+  { label: 'AI & Automation',  href: '#ai' },
+  { label: 'Hosting Plans',    href: '/#pricing' },
 ];
 
 export default function Navbar({ onContactOpen }) {
+  const { pathname } = useLocation();
+  const navLinks = pathname === '/services' ? SERVICES_LINKS : HOME_LINKS;
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -39,7 +50,7 @@ export default function Navbar({ onContactOpen }) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <a
               key={l.label}
               href={l.href}
@@ -77,7 +88,7 @@ export default function Navbar({ onContactOpen }) {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-[#080d1a]/95 backdrop-blur-md border-b border-white/[0.06] px-6 py-4 flex flex-col gap-4">
-          {NAV_LINKS.map((l) => (
+          {navLinks.map((l) => (
             <a
               key={l.label}
               href={l.href}
