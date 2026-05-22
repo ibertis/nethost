@@ -202,7 +202,7 @@ app/src/
 | Function | Purpose |
 |---|---|
 | `create-subscription` | Creates Stripe customer + subscription, returns clientSecret for PaymentElement confirmation. Supports test mode via `testMode` boolean in request body (uses `STRIPE_SECRET_KEY_TEST` and `STRIPE_PRICE_*_TEST` secrets). |
-| `stripe-webhook` | Handles Stripe subscription lifecycle events (payment_succeeded, payment_failed, subscription.deleted, subscription.updated) → updates `orders.status`. Uses HMAC SHA-256 signature verification (no Stripe SDK). Uses service-role key for DB updates. |
+| `stripe-webhook` | Handles Stripe subscription lifecycle events (payment_succeeded, payment_failed, subscription.deleted, subscription.updated) → updates `orders.status`. Uses HMAC SHA-256 signature verification (no Stripe SDK). Uses service-role key for DB updates. **Must be deployed with `--no-verify-jwt`** (Stripe webhooks don't include Supabase JWTs). Registered in Stripe as NETHOST-SignUp webhook pointing to `https://qsvwdemwttwrqgvsonql.supabase.co/functions/v1/stripe-webhook`. |
 | `domain-check` | Checks Namecheap availability + price via PHP proxy |
 | `domain-register` | Registers domain via Namecheap PHP proxy |
 | `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap; returns `{ wpAdminUrl, username, password, email, serverIp }`. **Before provisioning:** uses service-role key to insert an `orders` row with `status: 'provisioning'` (reuses existing provisioning row on retry). **After success:** updates row with credentials and `status: 'active'`. Step7 no longer does its own DB insert. Cloudways path: creates app via POST /app, waits 30s, then polls GET /server every 10s (up to 12×) to find app + credentials in server.apps array. Credentials may be at top-level app fields (sys_user/sys_password) not nested under creds[]. |
@@ -308,7 +308,7 @@ create table orders (
   created_at             timestamptz default now()
 );
 ```
-RLS: users can SELECT and INSERT their own rows. `stripe-webhook` and `provision-hosting` use service-role key for UPDATE/INSERT (bypasses RLS). Valid status values: `'provisioning'` | `'active'` | `'past_due'` | `'cancelled'`.
+RLS: users can SELECT and INSERT their own rows. `stripe-webhook` and `provision-hosting` use service-role key for UPDATE/INSERT (bypasses RLS). Valid status values: `'provisioning'` | `'active'` | `'past_due'` | `'cancelled'`. All webhook status writes use `'cancelled'` (double l) and `'past_due'` — must match Dashboard checks.
 
 ### Provisioning Tasks (Step7Provisioning.jsx)
 ```
@@ -368,7 +368,6 @@ Both variants show a 48-hour propagation notice.
 - [ ] Dedicated IP as a Pro differentiator — requires Cloudways provisioning changes; not yet implemented
 - [ ] Automated site cleanup on cancellation — delete from CyberPanel/Cloudways after billing period ends; currently manual
 - [ ] Cloudways multi-server strategy — all Business/Pro customers share one server; need plan for when to add a second
-- [ ] Live site status on dashboard — green/red dot per SiteCard showing if site is actually responding
 - [ ] Clean up DFP WooCommerce webhook in Stripe (leftover from old WordPress site)
 - [ ] Investigate link-spark webhook in Stripe (unknown origin)
 
@@ -400,3 +399,5 @@ Both variants show a 48-hour propagation notice.
 - [x] Security audit completed: RLS verified, PHP proxy hardened (CORS + secrets path), no service-role key in frontend
 - [x] Terms of Service + Privacy Policy pages live at nethost.co/terms and nethost.co/privacy
 - [x] Provisioning failure recovery: order row written before infrastructure APIs called; dashboard shows 'provisioning' status with support link if setup fails
+- [x] Live site status dots on dashboard — green/amber/red per SiteCard (useSiteStatus hook, no-cors fetch, 8s timeout, skipped for provisioning + DNS-pending orders)
+- [x] Stripe webhook fixed: NETHOST-SignUp endpoint now points to correct Supabase project; deployed with --no-verify-jwt; status values aligned ('cancelled'/'past_due') across webhook + cancel-subscription + Dashboard

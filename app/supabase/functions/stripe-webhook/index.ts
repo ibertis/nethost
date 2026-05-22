@@ -61,7 +61,7 @@ serve(async (req) => {
       if (subId) {
         await supabase
           .from('orders')
-          .update({ status: 'payment_failed' })
+          .update({ status: 'past_due' })
           .eq('stripe_subscription_id', subId);
       }
       break;
@@ -71,7 +71,7 @@ serve(async (req) => {
       const subId = event.data.object.id;
       await supabase
         .from('orders')
-        .update({ status: 'canceled' })
+        .update({ status: 'cancelled' })
         .eq('stripe_subscription_id', subId);
       break;
     }
@@ -79,8 +79,8 @@ serve(async (req) => {
     case 'customer.subscription.updated': {
       const sub = event.data.object;
       const newStatus = sub.status === 'active' ? 'active'
-        : sub.status === 'past_due'   ? 'payment_failed'
-        : sub.status === 'canceled'   ? 'canceled'
+        : sub.status === 'past_due'   ? 'past_due'
+        : sub.status === 'canceled'   ? 'cancelled'
         : null;
       if (newStatus) {
         await supabase
