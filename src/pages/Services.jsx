@@ -158,6 +158,11 @@ export default function ServicesPage({ onContactOpen }) {
         {/* Content */}
         <div className="relative z-20 w-full max-w-4xl mx-auto px-6 pt-28 pb-20 flex flex-col items-center text-center">
 
+          {/* Emblem */}
+          <div className="flex justify-center mb-6 mt-8 sm:mt-0">
+            <img src="/NETHOST_emblem.png" alt="NETHOST" className="h-16 w-auto" />
+          </div>
+
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/[0.07] border border-white/[0.12] text-cyan-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
