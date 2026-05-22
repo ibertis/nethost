@@ -84,26 +84,27 @@ async function provisionCloudways(domain: string, siteName: string) {
     }),
   });
   const appData = await appRes.json();
-  if (!appData?.app?.id) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
+  // Cloudways returns {status:true, operation_id:"..."} on success — no app object yet
+  if (!appData?.status) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
 
-  const appId = appData.app.id;
-  const operationId = appData.operation_id ?? appData.app?.operation_id;
-
-  // Step 4: Poll until the app is fully deployed (max ~90s)
+  // Step 4: Poll app list until our new app appears with credentials (max ~90s)
   let wpCreds: { username?: string; password?: string } = {};
-  for (let i = 0; i < 30; i++) {
-    await new Promise(r => setTimeout(r, 3000));
+  for (let i = 0; i < 18; i++) {
+    await new Promise(r => setTimeout(r, 5000));
     const appListRes = await fetch(
       `https://api.cloudways.com/api/v1/app?server_id=${server.id}`,
       { headers: authHeaders },
     );
     const { apps } = await appListRes.json();
-    const app = apps?.find((a: any) => a.id === appId);
-    if (app?.creds?.length) {
-      // Cloudways stores WP admin creds in app.creds[0]
-      const c = app.creds[0] ?? {};
-      wpCreds = { username: c.username ?? c.user, password: c.password ?? c.pass };
-      if (wpCreds.username && wpCreds.password) break;
+    // Find our app by label or project name
+    const app = apps?.find((a: any) =>
+      a.label === appLabel || a.project_name === domain || a.app_fqdn?.includes(appLabel)
+    );
+    if (app) {
+      const c = app.creds?.[0] ?? app.app_credentials?.[0] ?? {};
+      const user = c.username ?? c.user ?? c.wp_user;
+      const pass = c.password ?? c.pass ?? c.wp_password;
+      if (user && pass) { wpCreds = { username: user, password: pass }; break; }
     }
   }
 
