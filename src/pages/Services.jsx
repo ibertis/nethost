@@ -143,6 +143,7 @@ export default function ServicesPage({ onContactOpen }) {
         {/* Background video */}
         <video
           className="absolute inset-0 w-full h-full object-cover z-0"
+          style={{ filter: 'hue-rotate(215deg) saturate(1.2) brightness(0.85)' }}
           src="https://videos.pexels.com/video-files/18526841/uhd_30fps.mp4"
           autoPlay
           loop
