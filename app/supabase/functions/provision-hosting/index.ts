@@ -64,38 +64,59 @@ async function provisionCloudways(domain: string, siteName: string) {
     'Content-Type': 'application/json',
   };
 
-  // Step 2: Get list of servers to pick first available
+  // Step 2: Get list of servers — pick first available
   const serversRes = await fetch('https://api.cloudways.com/api/v1/server', { headers: authHeaders });
   const { servers } = await serversRes.json();
   if (!servers?.length) throw new Error('No Cloudways servers available');
   const server = servers[0];
+  const serverIp = server.public_ip ?? server.master_ip;
 
   // Step 3: Create WordPress application
-  const wpUser = 'nh' + domain.split('.')[0].replace(/[^a-z0-9]/g, '').slice(0, 10);
-  const wpPass = generatePassword();
+  const appLabel = siteName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase().slice(0, 30);
   const appRes = await fetch('https://api.cloudways.com/api/v1/app', {
     method: 'POST',
     headers: authHeaders,
     body: JSON.stringify({
       server_id:    server.id,
       application:  'wordpress',
-      app_label:    siteName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase(),
+      app_label:    appLabel,
       project_name: domain,
     }),
   });
   const appData = await appRes.json();
-  if (!appData?.app?.id) throw new Error('Cloudways app creation failed');
+  if (!appData?.app?.id) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
 
-  const serverIp = server.public_ip ?? server.master_ip;
+  const appId = appData.app.id;
+  const operationId = appData.operation_id ?? appData.app?.operation_id;
+
+  // Step 4: Poll until the app is fully deployed (max ~90s)
+  let wpCreds: { username?: string; password?: string } = {};
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    const appListRes = await fetch(
+      `https://api.cloudways.com/api/v1/app?server_id=${server.id}`,
+      { headers: authHeaders },
+    );
+    const { apps } = await appListRes.json();
+    const app = apps?.find((a: any) => a.id === appId);
+    if (app?.creds?.length) {
+      // Cloudways stores WP admin creds in app.creds[0]
+      const c = app.creds[0] ?? {};
+      wpCreds = { username: c.username ?? c.user, password: c.password ?? c.pass };
+      if (wpCreds.username && wpCreds.password) break;
+    }
+  }
+
+  if (!wpCreds.username) throw new Error('Cloudways app deployed but could not retrieve WP credentials');
 
   await setDnsRecords(domain, serverIp);
 
   return {
     wpAdminUrl: `https://${domain}/wp-admin`,
-    username:   wpUser,
-    password:   wpPass,
+    username:   wpCreds.username,
+    password:   wpCreds.password!,
     email:      `hello@${domain}`,
-    serverIp:   serverIp,
+    serverIp,
   };
 }
 
