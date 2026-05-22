@@ -37,7 +37,7 @@ function WizardContent() {
 
 function AppGate() {
   const { isAuthenticated, isLoadingAuth } = useAuth();
-  const [view, setView] = useState('wizard'); // 'wizard' | 'dashboard' | 'account'
+  const [view, setView] = useState('dashboard'); // 'wizard' | 'dashboard' | 'account'
 
   if (isLoadingAuth) {
     return (
