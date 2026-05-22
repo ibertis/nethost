@@ -70,9 +70,17 @@ export default function Step7Provisioning() {
             email:      `hello@${data.domain}`,
           };
         } else if (!completedTasksRef.current.has(1)) {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
           const [provisionResult] = await Promise.all([
             supabase.functions.invoke('provision-hosting', {
-              body: { plan: data.plan, domain: data.domain, siteName: data.identity?.name || data.domain },
+              body: {
+                plan:                   data.plan,
+                domain:                 data.domain,
+                siteName:               data.identity?.name || data.domain,
+                userId:                 currentUser?.id      ?? null,
+                stripeCustomerId:       data.stripeCustomerId      ?? null,
+                stripeSubscriptionId:   data.stripeSubscriptionId  ?? null,
+              },
             }),
             delay(MIN_TASK_MS),
           ]);
@@ -105,24 +113,11 @@ export default function Step7Provisioning() {
         // Store real credentials in wizard state
         update({ provisionedCredentials });
 
-        // Persist order to Supabase for dashboard
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // Non-blocking — table may not exist yet; don't let this fail the wizard
-          supabase.from('orders').insert({
-            user_id:                  user.id,
-            plan:                     data.plan,
-            domain:                   provisionedCredentials.domain,
-            wp_admin_url:             provisionedCredentials.wpAdminUrl,
-            username:                 provisionedCredentials.username,
-            password:                 provisionedCredentials.password ?? null,
-            email:                    provisionedCredentials.email,
-            stripe_customer_id:       data.stripeCustomerId    ?? null,
-            stripe_subscription_id:   data.stripeSubscriptionId ?? null,
-          }).then(() => {}).catch(() => {});
-
-          // Fire-and-forget confirmation email — skip in test mode
-          if (!TEST_MODE) {
+        // Order row is written by provision-hosting using service-role key.
+        // Fire confirmation email (non-blocking).
+        if (!TEST_MODE) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
             supabase.functions.invoke('send-order-confirmation', {
               body: {
                 to:         user.email,
@@ -152,10 +147,17 @@ export default function Step7Provisioning() {
         <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
           <AlertCircle size={24} className="text-red-400" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Provisioning Failed</h2>
-        <p className="text-slate-400 text-sm max-w-sm mb-6">{error}</p>
+        <h2 className="text-xl font-bold text-white mb-2">Setup Encountered an Issue</h2>
+        <p className="text-slate-400 text-sm max-w-sm mb-3">{error}</p>
+        <p className="text-slate-400 text-sm max-w-sm mb-6">
+          Your payment was accepted and your order is saved — you can retry below, or{' '}
+          <a href="mailto:hello@nethost.co" className="text-cyan-400 hover:text-cyan-300 transition">email us</a>{' '}
+          and we'll complete setup for you. Reference domain: <span className="text-white font-mono">{data.domain}</span>
+        </p>
         <p className="text-slate-500 text-xs mb-6">
-          Need help? Email <a href="mailto:hello@nethost.co" className="text-cyan-500 hover:text-cyan-400 transition">hello@nethost.co</a> or call <a href="tel:+18668076242" className="text-cyan-500 hover:text-cyan-400 transition">(866) 807-6242</a>
+          <a href="mailto:hello@nethost.co" className="text-cyan-500 hover:text-cyan-400 transition">hello@nethost.co</a>
+          {' · '}
+          <a href="tel:+18668076242" className="text-cyan-500 hover:text-cyan-400 transition">(866) 807-6242</a>
         </p>
         <button
           onClick={() => {

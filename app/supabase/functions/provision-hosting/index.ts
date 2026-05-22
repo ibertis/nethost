@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -87,23 +88,29 @@ async function provisionCloudways(domain: string, siteName: string) {
   // Cloudways returns {status:true, operation_id:"..."} on success — no app object yet
   if (!appData?.status) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
 
-  // Step 4: Poll app list until our new app appears with credentials (max ~90s)
+  // Step 4: Poll app list until our new app appears with credentials (max ~150s)
+  // Initial 30s wait — app creation is async and WP install takes time
+  await new Promise(r => setTimeout(r, 30000));
   let wpCreds: { username?: string; password?: string } = {};
-  for (let i = 0; i < 18; i++) {
-    await new Promise(r => setTimeout(r, 5000));
-    const appListRes = await fetch(
-      `https://api.cloudways.com/api/v1/app?server_id=${server.id}`,
-      { headers: authHeaders },
-    );
-    const { apps } = await appListRes.json();
-    // Find our app by label or project name
-    const app = apps?.find((a: any) =>
+  for (let i = 0; i < 12; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 10000));
+    // Poll /server — each server object includes its apps array with credentials
+    const serverListRes = await fetch('https://api.cloudways.com/api/v1/server', { headers: authHeaders });
+    const serverListRaw = await serverListRes.text();
+    let serverListData: any;
+    try { serverListData = JSON.parse(serverListRaw); } catch {
+      throw new Error(`Cloudways server list non-JSON (HTTP ${serverListRes.status}): ${serverListRaw.slice(0, 300)}`);
+    }
+    const servers = serverListData?.servers ?? [];
+    const ourServer = servers.find((s: any) => s.id == server.id);
+    const apps = ourServer?.apps ?? [];
+    const app = apps.find((a: any) =>
       a.label === appLabel || a.project_name === domain || a.app_fqdn?.includes(appLabel)
     );
     if (app) {
       const c = app.creds?.[0] ?? app.app_credentials?.[0] ?? {};
-      const user = c.username ?? c.user ?? c.wp_user;
-      const pass = c.password ?? c.pass ?? c.wp_password;
+      const user = c.username ?? c.user ?? c.wp_user ?? app.wp_user ?? app.sys_user ?? app.username;
+      const pass = c.password ?? c.pass ?? c.wp_password ?? app.wp_password ?? app.sys_password ?? app.password;
       if (user && pass) { wpCreds = { username: user, password: pass }; break; }
     }
   }
@@ -149,9 +156,47 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { plan, domain, siteName } = await req.json();
+    const { plan, domain, siteName, userId, stripeCustomerId, stripeSubscriptionId } = await req.json();
     if (!plan || !domain) {
       return new Response(JSON.stringify({ error: 'plan and domain required' }), { status: 400, headers: CORS });
+    }
+
+    // Service-role client — used for order tracking; bypasses RLS
+    const svcSupabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // Ensure a 'provisioning' order row exists immediately so the user's payment is always
+    // traceable even if provisioning fails mid-flight (e.g. browser closes, server error).
+    // On retry, reuse the existing provisioning row rather than inserting a duplicate.
+    let orderId: string | null = null;
+    if (userId) {
+      const { data: existing } = await svcSupabase
+        .from('orders')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('domain', domain)
+        .eq('status', 'provisioning')
+        .maybeSingle();
+
+      if (existing?.id) {
+        orderId = existing.id;
+      } else {
+        const { data: newOrder } = await svcSupabase
+          .from('orders')
+          .insert({
+            user_id:                userId,
+            plan,
+            domain,
+            stripe_customer_id:     stripeCustomerId   ?? null,
+            stripe_subscription_id: stripeSubscriptionId ?? null,
+            status:                 'provisioning',
+          })
+          .select('id')
+          .single();
+        orderId = newOrder?.id ?? null;
+      }
     }
 
     let result;
@@ -160,6 +205,20 @@ serve(async (req) => {
     } else {
       // Business or Pro → Cloudways
       result = await provisionCloudways(domain, siteName ?? domain);
+    }
+
+    // Update the order row with credentials and mark active
+    if (orderId) {
+      await svcSupabase
+        .from('orders')
+        .update({
+          wp_admin_url: result.wpAdminUrl,
+          username:     result.username,
+          password:     result.password,
+          email:        result.email,
+          status:       'active',
+        })
+        .eq('id', orderId);
     }
 
     return new Response(

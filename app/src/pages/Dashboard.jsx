@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, Plus, LogOut, User, Clock } from 'lucide-react';
+import { Copy, ExternalLink, Plus, LogOut, User, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
@@ -49,29 +49,36 @@ function SiteCard({ order, onCancelled }) {
     onCancelled();
   }
 
+  const isProvisioning = order.status === 'provisioning';
+
   return (
     <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5">
       {/* Card header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-white font-bold text-lg">{order.domain}</h3>
-          <p className="text-slate-500 text-xs mt-0.5">Provisioned {date}</p>
+          <p className="text-slate-500 text-xs mt-0.5">{isProvisioning ? `Order placed ${date}` : `Provisioned ${date}`}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planClass}`}>{order.plan}</span>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+            isProvisioning              ? 'bg-blue-500/15 text-blue-400' :
             order.status === 'cancelled' ? 'bg-red-500/15 text-red-400' :
             order.status === 'past_due'  ? 'bg-yellow-500/15 text-yellow-400' :
                                            'bg-emerald-500/15 text-emerald-400'
-          }`}>{order.status === 'cancelled' ? 'Cancelled' : order.status === 'past_due' ? 'Past Due' : 'Active'}</span>
-          <a
-            href={order.wp_admin_url ?? `https://${order.domain}/wp-admin`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition"
-          >
-            WP Admin <ExternalLink size={11} />
-          </a>
+          }`}>
+            {isProvisioning ? 'Setting Up' : order.status === 'cancelled' ? 'Cancelled' : order.status === 'past_due' ? 'Past Due' : 'Active'}
+          </span>
+          {!isProvisioning && (
+            <a
+              href={order.wp_admin_url ?? `https://${order.domain}/wp-admin`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition"
+            >
+              WP Admin <ExternalLink size={11} />
+            </a>
+          )}
           {order.status === 'active' && (
             <button
               onClick={handleCancel}
@@ -84,8 +91,22 @@ function SiteCard({ order, onCancelled }) {
         </div>
       </div>
 
+      {/* Provisioning in progress notice */}
+      {isProvisioning && (
+        <div className="flex items-start gap-3 bg-blue-500/[0.07] border border-blue-500/20 rounded-xl px-4 py-3 mb-4">
+          <Loader2 size={14} className="text-blue-400 mt-0.5 shrink-0 animate-spin" />
+          <div className="flex-1 min-w-0">
+            <p className="text-blue-300 text-xs font-semibold mb-0.5">Setting up your site</p>
+            <p className="text-blue-400/70 text-xs leading-relaxed">
+              Your WordPress site is being provisioned. This usually completes within a few minutes.
+              If it's been a while, <a href="mailto:hello@nethost.co" className="text-blue-300 hover:text-blue-200 transition">contact support</a> and we'll sort it out — your payment is safe.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* DNS propagation notice */}
-      {dnsLikelyPending && (
+      {!isProvisioning && dnsLikelyPending && (
         <div className="flex items-start gap-3 bg-amber-500/[0.07] border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
           <Clock size={14} className="text-amber-400 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -103,13 +124,15 @@ function SiteCard({ order, onCancelled }) {
         </div>
       )}
 
-      {/* Credentials */}
-      <div className="bg-black/20 rounded-xl px-4 py-1">
-        <CopyField label="Website"  value={`https://${order.domain}`} />
-        {order.username && <CopyField label="Username" value={order.username} mono />}
-        {order.password && <CopyField label="Password" value={order.password} mono />}
-        {order.email    && <CopyField label="Email"    value={order.email} />}
-      </div>
+      {/* Credentials — only shown once provisioned */}
+      {!isProvisioning && (
+        <div className="bg-black/20 rounded-xl px-4 py-1">
+          <CopyField label="Website"  value={`https://${order.domain}`} />
+          {order.username && <CopyField label="Username" value={order.username} mono />}
+          {order.password && <CopyField label="Password" value={order.password} mono />}
+          {order.email    && <CopyField label="Email"    value={order.email} />}
+        </div>
+      )}
     </div>
   );
 }
