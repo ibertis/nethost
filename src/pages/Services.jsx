@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight, Palette, Monitor, TrendingUp, Zap, Check, Users, Layers, Timer, ChevronRight } from 'lucide-react';
 import Footer from '../components/Footer';
 
@@ -104,6 +105,16 @@ const DIFFERENTIATORS = [
 ];
 
 export default function ServicesPage({ onContactOpen }) {
+  const titles = useMemo(() => ['Branded.', 'Marketed.', 'Automated.'], []);
+  const [titleNumber, setTitleNumber] = useState(0);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setTitleNumber((n) => (n === titles.length - 1 ? 0 : n + 1));
+    }, 2200);
+    return () => clearTimeout(id);
+  }, [titleNumber, titles]);
+
   useEffect(() => {
     document.title = 'Digital Services — Brand, Web, Marketing & AI | NETHOST';
     const meta = document.querySelector('meta[name="description"]');
@@ -128,59 +139,88 @@ export default function ServicesPage({ onContactOpen }) {
     <main className="min-h-screen bg-[#050914]">
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-[#050914] pt-28 pb-24">
-        {/* Background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-violet-600/8 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-cyan-500/6 rounded-full blur-[100px] pointer-events-none" />
+      <section className="relative overflow-hidden min-h-screen flex items-center justify-center">
+        {/* Background video */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          src="https://videos.pexels.com/video-files/18526841/uhd_30fps.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+        {/* NETHOST-tinted dark overlay */}
+        <div className="absolute inset-0 bg-[#050914]/85 z-10" />
+        {/* Subtle cyan glow from below to blend into the rest of the page */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#050914] to-transparent z-10 pointer-events-none" />
 
-        <div className="relative max-w-6xl mx-auto px-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-white/[0.05] border border-white/[0.09] text-violet-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              Digital Services
-            </div>
+        {/* Content */}
+        <div className="relative z-20 w-full max-w-4xl mx-auto px-6 pt-28 pb-20 flex flex-col items-center text-center">
 
-            <h1 className="text-5xl md:text-6xl font-black text-white leading-[1.05] tracking-tight mb-6">
-              Build a Brand<br />
-              <span className="text-gradient">That Works</span><br />
-              While You Sleep.
-            </h1>
-
-            <p className="text-lg text-slate-400 leading-relaxed mb-10 max-w-xl">
-              Beyond hosting, NETHOST offers a full suite of digital services — from brand identity
-              and custom websites to performance marketing and AI-powered automation.
-              One partner. Everything you need to compete and grow.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={onContactOpen}
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold px-8 py-3.5 rounded-full hover:opacity-90 transition text-sm"
-              >
-                Start a Project <ArrowRight size={15} />
-              </button>
-              <a
-                href="#services-list"
-                className="inline-flex items-center justify-center gap-2 bg-white/[0.06] border border-white/10 text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white/10 transition text-sm"
-              >
-                Explore Services
-              </a>
-            </div>
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 bg-white/[0.07] border border-white/[0.12] text-cyan-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            Digital Services
           </div>
 
-          {/* Floating service category pills */}
-          <div className="hidden lg:flex flex-wrap gap-3 absolute top-20 right-6 max-w-xs flex-col items-end">
+          {/* Animated headline */}
+          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight leading-[1.05] mb-6">
+            Your Business,
+            <span className="relative flex w-full justify-center overflow-hidden md:pb-4 md:pt-1 mt-1" style={{ height: '1.15em' }}>
+              &nbsp;
+              {titles.map((title, index) => (
+                <motion.span
+                  key={index}
+                  className="absolute text-gradient drop-shadow-[0_0_30px_rgba(14,165,233,0.45)]"
+                  initial={{ opacity: 0, y: -80 }}
+                  transition={{ type: 'spring', stiffness: 55, damping: 14 }}
+                  animate={
+                    titleNumber === index
+                      ? { y: 0, opacity: 1 }
+                      : { y: titleNumber > index ? -120 : 120, opacity: 0 }
+                  }
+                >
+                  {title}
+                </motion.span>
+              ))}
+            </span>
+          </h1>
+
+          {/* Subtext */}
+          <p className="text-lg md:text-xl text-slate-400 leading-relaxed mb-10 max-w-2xl">
+            Beyond hosting, NETHOST offers a full suite of digital services — brand identity,
+            custom websites, performance marketing, and AI-powered automation.
+            One partner. Everything you need to compete and grow.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-12">
+            <button
+              onClick={onContactOpen}
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold px-8 py-3.5 rounded-full hover:opacity-90 transition text-sm"
+            >
+              Start a Project <ArrowRight size={15} />
+            </button>
+            <a
+              href="#services-list"
+              className="inline-flex items-center justify-center gap-2 bg-white/[0.08] border border-white/[0.12] text-white font-semibold px-8 py-3.5 rounded-full hover:bg-white/[0.14] transition text-sm"
+            >
+              Explore Services
+            </a>
+          </div>
+
+          {/* Service category pills */}
+          <div className="flex flex-wrap justify-center gap-2.5">
             {SERVICES.map((s) => (
               <a
                 key={s.id}
                 href={`#${s.id}`}
-                className={`flex items-center gap-2.5 bg-white/[0.04] border ${s.border} rounded-xl px-4 py-2.5 hover:bg-white/[0.07] transition group`}
+                className={`flex items-center gap-2 bg-white/[0.05] border ${s.border} rounded-full px-4 py-2 hover:bg-white/[0.09] transition group`}
               >
-                <s.icon size={14} className={s.iconColor} />
+                <s.icon size={13} className={s.iconColor} />
                 <span className="text-slate-300 text-xs font-semibold group-hover:text-white transition">
                   {s.label}
                 </span>
-                <ChevronRight size={12} className="text-slate-600 group-hover:text-slate-400 transition" />
               </a>
             ))}
           </div>
