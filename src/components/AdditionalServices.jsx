@@ -1,26 +1,10 @@
-import { Monitor, Search, Megaphone, Palette } from 'lucide-react';
+import { Monitor, Search, Megaphone, Palette, ArrowRight } from 'lucide-react';
 
 const SERVICES = [
-  {
-    icon: Monitor,
-    title: 'Website Design & Development',
-    description: 'Custom, conversion-focused websites built and hosted all in one place.',
-  },
-  {
-    icon: Search,
-    title: 'SEO Optimization',
-    description: 'On-page SEO, technical audits, and content strategy to help you get found.',
-  },
-  {
-    icon: Megaphone,
-    title: 'Digital Marketing',
-    description: 'Paid ads, lead generation funnels, and marketing automation for growth.',
-  },
-  {
-    icon: Palette,
-    title: 'Branding & Identity',
-    description: 'Logo design and visual identity systems that make your brand memorable.',
-  },
+  { icon: Monitor,   title: 'Website Design & Development', description: 'Custom, conversion-focused websites built and hosted all in one place.', href: '/services#web' },
+  { icon: Search,    title: 'SEO Optimization',             description: 'On-page SEO, technical audits, and content strategy to help you get found.', href: '/services#marketing' },
+  { icon: Megaphone, title: 'Digital Marketing',            description: 'Paid ads, lead generation funnels, and marketing automation for growth.', href: '/services#marketing' },
+  { icon: Palette,   title: 'Branding & Identity',          description: 'Logo design and visual identity systems that make your brand memorable.', href: '/services#branding' },
 ];
 
 export default function AdditionalServices({ onContactOpen }) {
@@ -41,28 +25,35 @@ export default function AdditionalServices({ onContactOpen }) {
           </p>
         </div>
 
-        {/* Cards — horizontal, compact */}
+        {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {SERVICES.map(({ icon: Icon, title, description }) => (
-            <div
+          {SERVICES.map(({ icon: Icon, title, description, href }) => (
+            <a
               key={title}
-              className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 card-hover group"
+              href={href}
+              className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5 card-hover group block"
             >
               <div className="p-2 bg-white/[0.05] rounded-lg w-fit mb-3 group-hover:bg-cyan-500/10 transition-colors">
                 <Icon size={18} className="text-slate-400 group-hover:text-cyan-400 transition-colors" />
               </div>
               <h3 className="text-slate-200 font-semibold text-sm mb-1.5">{title}</h3>
               <p className="text-slate-600 text-xs leading-relaxed">{description}</p>
-            </div>
+            </a>
           ))}
         </div>
 
-        <p className="text-center text-slate-600 text-sm mt-8">
-          Interested in bundling services?{' '}
-          <button onClick={onContactOpen} className="text-cyan-400 hover:underline">
-            Get in touch for a custom quote.
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+          <a
+            href="/services"
+            className="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 text-sm font-semibold transition"
+          >
+            Explore all services <ArrowRight size={14} />
+          </a>
+          <span className="text-slate-700 hidden sm:inline">·</span>
+          <button onClick={onContactOpen} className="text-slate-500 hover:text-slate-300 text-sm transition">
+            Get in touch for a custom quote
           </button>
-        </p>
+        </div>
       </div>
     </section>
   );

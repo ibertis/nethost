@@ -117,12 +117,13 @@ export PATH="/opt/homebrew/bin:$PATH" && npm run dev -- --port 5174
 
 ```
 src/
-├── App.jsx                 # Imports all sections; manages contactOpen state (useState); passes onContactOpen prop to Navbar, Pricing, AdditionalServices, Footer; renders ContactModal; routes: /, /resources, /terms, /privacy
+├── App.jsx                 # Imports all sections; manages contactOpen state (useState); passes onContactOpen prop to Navbar, Pricing, AdditionalServices, Footer; renders ContactModal; routes: /, /resources, /services, /terms, /privacy
 ├── index.css               # Tailwind directives + custom utilities
 ├── pages/
 │   ├── Terms.jsx           # Terms of Service page (/terms)
 │   ├── Privacy.jsx         # Privacy Policy page (/privacy)
 │   ├── Resources.jsx       # Resources page (/resources)
+│   ├── Services.jsx        # Supplemental services page (/services) — branding, web, marketing, AI/automation; not in main nav; linked from AdditionalServices cards + "Explore all services →"
 │   └── NotFound.jsx        # 404 catch-all
 └── components/
     ├── Navbar.jsx           # Sticky glassmorphism, logo img, mobile hamburger; "Contact Us" link (opens modal) + "Start a Project" CTA
@@ -401,3 +402,6 @@ Both variants show a 48-hour propagation notice.
 - [x] Provisioning failure recovery: order row written before infrastructure APIs called; dashboard shows 'provisioning' status with support link if setup fails
 - [x] Live site status dots on dashboard — green/amber/red per SiteCard (useSiteStatus hook, no-cors fetch, 8s timeout, skipped for provisioning + DNS-pending orders)
 - [x] Stripe webhook fixed: NETHOST-SignUp endpoint now points to correct Supabase project; deployed with --no-verify-jwt; status values aligned ('cancelled'/'past_due') across webhook + cancel-subscription + Dashboard
+- [x] Services page live at /services — 4 service categories (branding, web, marketing, AI/automation); linked from AdditionalServices on homepage; each service has full section with "What's Included" card
+- [x] SEO pass completed: per-page document.title for all routes; sitemap.xml updated with /services, /terms, /privacy; heading hierarchy verified (h1→h2→h3); all images have alt tags; index.html has full OG/Twitter/JSON-LD
+- [x] Security audit: no hardcoded secrets in frontend; PHP proxy CORS locked to app.nethost.co; RLS active; authenticated endpoints use JWT. Note: create-subscription and provision-hosting accept anon-key requests (by design — actual protection is Stripe payment + RLS). Recommendation: add Stripe subscription status check in provision-hosting before provisioning infrastructure.

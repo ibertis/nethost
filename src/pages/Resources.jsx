@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import CtaBanner from '../components/CtaBanner';
 import Footer from '../components/Footer';
@@ -50,6 +51,10 @@ const TOOLS = [
 ];
 
 export default function Toolkit({ onContactOpen }) {
+  useEffect(() => {
+    document.title = 'Resources & Tools | NETHOST';
+  }, []);
+
   return (
     <>
       <main className="pt-32 pb-24 bg-[#050914]">

@@ -1,8 +1,12 @@
+import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 const EFFECTIVE = 'May 22, 2026';
 
 export default function Privacy() {
+  useEffect(() => {
+    document.title = 'Privacy Policy | NETHOST';
+  }, []);
   return (
     <main className="min-h-screen bg-[#050914]">
       <div className="max-w-3xl mx-auto px-6 py-16">

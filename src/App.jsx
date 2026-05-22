@@ -14,6 +14,7 @@ import CtaBanner from './components/CtaBanner';
 import Footer from './components/Footer';
 import ContactModal from './components/ContactModal';
 import Resources from './pages/Resources';
+import ServicesPage from './pages/Services';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
@@ -52,6 +53,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/resources" element={<Resources onContactOpen={() => setContactOpen(true)} />} />
+        <Route path="/services" element={<ServicesPage onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<NotFound />} />
