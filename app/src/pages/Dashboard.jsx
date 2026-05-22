@@ -3,6 +3,21 @@ import { Copy, ExternalLink, Plus, LogOut, User, Clock, Loader2 } from 'lucide-r
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
+function useSiteStatus(domain, enabled) {
+  const [status, setStatus] = useState('checking');
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    fetch(`https://${domain}`, { mode: 'no-cors', signal: controller.signal })
+      .then(() => setStatus('up'))
+      .catch(() => setStatus('down'))
+      .finally(() => clearTimeout(timer));
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [domain, enabled]);
+  return status;
+}
+
 const PLAN_COLORS = {
   Starter:  'bg-slate-500/15 text-slate-400',
   Business: 'bg-cyan-500/15 text-cyan-400',
@@ -39,6 +54,8 @@ function SiteCard({ order, onCancelled }) {
   const hoursSince = (Date.now() - new Date(order.created_at)) / 3_600_000;
   const dnsLikelyPending = hoursSince < 48;
   const [cancelling, setCancelling] = useState(false);
+  const checkStatus = order.status === 'active' && !dnsLikelyPending;
+  const siteStatus = useSiteStatus(order.domain, checkStatus);
 
   async function handleCancel() {
     if (!confirm(`Cancel hosting for ${order.domain}?\n\nYour site will remain active until the end of the current billing period.`)) return;
@@ -57,7 +74,25 @@ function SiteCard({ order, onCancelled }) {
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-white font-bold text-lg">{order.domain}</h3>
-          <p className="text-slate-500 text-xs mt-0.5">{isProvisioning ? `Order placed ${date}` : `Provisioned ${date}`}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-slate-500 text-xs">{isProvisioning ? `Order placed ${date}` : `Provisioned ${date}`}</p>
+            {checkStatus && (
+              <span className="flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  siteStatus === 'up'       ? 'bg-emerald-400' :
+                  siteStatus === 'down'     ? 'bg-red-400' :
+                                              'bg-slate-600 animate-pulse'
+                }`} />
+                <span className={`text-xs ${
+                  siteStatus === 'up'   ? 'text-emerald-500/70' :
+                  siteStatus === 'down' ? 'text-red-400/70' :
+                                          'text-slate-600'
+                }`}>
+                  {siteStatus === 'up' ? 'Live' : siteStatus === 'down' ? 'Not responding' : 'Checking…'}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${planClass}`}>{order.plan}</span>
