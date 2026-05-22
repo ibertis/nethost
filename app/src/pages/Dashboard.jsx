@@ -33,11 +33,21 @@ function CopyField({ label, value, mono }) {
   );
 }
 
-function SiteCard({ order }) {
+function SiteCard({ order, onCancelled }) {
   const planClass = PLAN_COLORS[order.plan] ?? PLAN_COLORS.Business;
   const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const hoursSince = (Date.now() - new Date(order.created_at)) / 3_600_000;
   const dnsLikelyPending = hoursSince < 48;
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    if (!confirm(`Cancel hosting for ${order.domain}?\n\nYour site will remain active until the end of the current billing period.`)) return;
+    setCancelling(true);
+    const { error } = await supabase.functions.invoke('cancel-subscription', { body: { orderId: order.id } });
+    setCancelling(false);
+    if (error) { alert('Could not cancel. Please try again or contact support.'); return; }
+    onCancelled();
+  }
 
   return (
     <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5">
@@ -62,6 +72,15 @@ function SiteCard({ order }) {
           >
             WP Admin <ExternalLink size={11} />
           </a>
+          {order.status === 'active' && (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="text-xs text-slate-600 hover:text-red-400 transition disabled:opacity-50"
+            >
+              {cancelling ? 'Cancelling…' : 'Cancel'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -188,7 +207,7 @@ export default function Dashboard({ onNewSite, onAccount }) {
         ) : (
           <div className="flex flex-col gap-5">
             {orders.map((order) => (
-              <SiteCard key={order.id} order={order} />
+              <SiteCard key={order.id} order={order} onCancelled={() => setOrders(o => o.map(x => x.id === order.id ? { ...x, status: 'cancelled' } : x))} />
             ))}
           </div>
         )}
