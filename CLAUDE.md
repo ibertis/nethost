@@ -369,7 +369,7 @@ Both variants show a 48-hour propagation notice.
 - [ ] Dedicated IP as a Pro differentiator — requires Cloudways provisioning changes; not yet implemented
 - [ ] Automated site cleanup on cancellation — delete from CyberPanel/Cloudways after billing period ends; currently manual
 - [ ] Cloudways multi-server strategy — all Business/Pro customers share one server; need plan for when to add a second
-- [ ] Enable Cloudways SMTP addon on nethost-business server — without it, WordPress sites on Business/Pro plans cannot send email (contact forms, WooCommerce, WP password resets). Cloudways recommends Elastic Email (has free tier). Does NOT affect NETHOST's own transactional emails (those go through Resend).
+- [x] Enable Cloudways SMTP addon on nethost-business server — configured with Resend SMTP (smtp.resend.com, port 587, username: resend, dedicated `cloudways-smtp` API key). All Business/Pro WordPress sites can now send email.
 - [ ] Clean up DFP WooCommerce webhook in Stripe (leftover from old WordPress site)
 - [ ] Investigate link-spark webhook in Stripe (unknown origin)
 
