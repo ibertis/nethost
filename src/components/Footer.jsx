@@ -2,11 +2,11 @@ import { Mail, Phone, Globe } from 'lucide-react';
 
 const LINKS = {
   Services: [
-    { label: 'Web Hosting', href: '/#services' },
-    { label: 'Website Design', href: '/#services' },
-    { label: 'SEO Optimization', href: '/#services' },
-    { label: 'Digital Marketing', href: '/#services' },
-    { label: 'Branding & Identity', href: '/#services' },
+    { label: 'Web Hosting',       href: '/#pricing' },
+    { label: 'Website Design',    href: '/services#web' },
+    { label: 'SEO Optimization',  href: '/services#marketing' },
+    { label: 'Digital Marketing', href: '/services#marketing' },
+    { label: 'Branding & Identity', href: '/services#branding' },
   ],
   Company: [
     { label: 'About', href: '/' },
