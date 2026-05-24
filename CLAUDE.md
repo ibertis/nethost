@@ -224,6 +224,108 @@ Configured in Stripe live mode (Settings → Billing → Customer portal):
 - Payment methods: enabled
 - Cancellations: enabled, cancel at end of billing period, collect cancellation reason
 
+---
+
+## WordPress Template Site (template.nethost.co)
+
+The Starter plan provisioning clones this pre-built WordPress site as every customer's starting point. `provision-cyberpanel.php` does a WP-CLI DB export → import → search-replace (`template.nethost.co` → customer domain) → admin credential update → uploads rsync.
+
+### Access
+```bash
+# SSH
+ssh -i ~/.ssh/nethost_vps root@76.13.118.227
+# or via alias (configured in ~/.ssh/config)
+ssh nethost-vps
+
+# WP-CLI — always use this exact path on the VPS
+/usr/bin/wp --allow-root --path=/home/template.nethost.co/public_html
+
+# Deploy a file
+scp -i ~/.ssh/nethost_vps <local-file> root@76.13.118.227:/tmp/<file>
+```
+
+### Theme + Page Builder
+- **Theme:** Astra (Balor Starter Template — black/white, Poppins font)
+- **Page builder:** Elementor 4.x — flexbox container format (`elType: "container"`)
+- **Font:** Poppins loaded via Google Fonts / Astra theme
+
+### Page IDs
+| Page | ID | Notes |
+|---|---|---|
+| Home | 18 | Customised hero copy |
+| About | 137 | Full rebuild — hero / story split / values / CTA |
+| Services | 142 | Full rebuild — hero / 3 cards / split / process / stats / CTA |
+| Contact | 138 | Updated copy, icon-boxes retained |
+| Privacy Policy | 3 | Draft |
+
+### Media Library (Balor Template Images)
+Base URL: `http://template.nethost.co/wp-content/uploads/2022/05/`
+
+| File | Attachment ID |
+|---|---|
+| `hero-img.jpg` | 27 |
+| `img-1.jpg` | 37 |
+| `img-2.jpg` | 48 |
+| `img-3.jpg` | 49 |
+| `leah-img.jpg` | 93 |
+| `contact.jpg` | 134 |
+
+### MU Plugin
+`vps-files/nethost-setup.php` deployed to `/home/template.nethost.co/public_html/wp-content/mu-plugins/nethost-setup.php`
+- Redirects new admin logins to Astra Starter Templates until `nethost_setup_done` option is set
+- Shows dismissible admin notice pointing to Starter Templates
+
+### Page Builder Scripts
+Local PHP scripts in `vps-files/` build/update pages via `wp eval-file`.
+
+| Script | Purpose |
+|---|---|
+| `vps-files/build-services.php` | Services page full build — use as canonical reference for builder pattern |
+| `vps-files/update-template-pages.php` | **DEPRECATED / BROKEN** — the `walk_update()` approach corrupted Home (ID 18) and failed on Contact (ID 138). Do not use or extend this pattern. |
+
+**Deploy + run pattern:**
+```bash
+scp -i ~/.ssh/nethost_vps vps-files/<script>.php root@76.13.118.227:/tmp/<script>.php && \
+ssh -i ~/.ssh/nethost_vps root@76.13.118.227 \
+  "/usr/bin/wp --allow-root --path=/home/template.nethost.co/public_html eval-file /tmp/<script>.php 2>&1"
+```
+
+### Elementor JSON Builder — Critical Rules
+
+Elementor 4.x stores page data as JSON in `_elementor_data` post meta. All build scripts use the same `section_outer()` / `col()` / `w_text()` / `w_heading()` / `w_button()` helper pattern.
+
+1. **Background activation** — must include `background_background: 'classic'` alongside any `background_color` or `background_image`. Without it the background doesn't render (silent fail).
+
+2. **Column widths need two settings** — both `_column_size: 50` AND `width: {size: 50, unit: '%'}`. One alone doesn't work.
+
+3. **No literal newlines inside HTML strings** — `wp_json_encode` preserves `\n` chars, and Elementor's text widget renders them as a visible `n` on the page. Put all HTML on a **single line**. Use `<br>` for line breaks.
+
+4. **Image widgets** — only need `image: {id: "27", url: "..."}` and `image_size: "full"`. No other settings needed.
+
+5. **Use Unicode characters directly** in strings (e.g. `✓`) rather than HTML entities like `&#10003;`. Entities can render as literal text in the widget.
+
+6. **Nested inner containers work** — a `col()` can hold further `col()` entries to build a row-within-column layout (e.g. 4-column step grid inside a section column). Set `flex_direction: 'row'` on the parent col.
+
+7. **Post meta write pattern** after any build:
+```php
+update_post_meta($id, '_elementor_data', wp_json_encode($data, JSON_UNESCAPED_UNICODE));
+update_post_meta($id, '_elementor_edit_mode', 'builder');
+update_post_meta($id, '_elementor_template_type', 'wp-page');
+update_post_meta($id, '_wp_page_template', 'elementor_header_footer');
+\Elementor\Plugin::$instance->files_manager->clear_cache(); // clears LiteSpeed + Elementor cache
+```
+
+8. **NEVER patch existing Elementor JSON via `json_decode` → modify → `wp_json_encode`** — this corrupts the stored data whenever replacement strings contain `"` (double-quote) characters inside HTML. For example, a testimonial like `<p>"Great service!"</p>` will prematurely terminate the JSON string when re-encoded, breaking the entire page (renders unstyled or blank). The `walk_update()` / find-replace-on-decoded-array approach is inherently unsafe for any HTML that contains quotes. **Always rebuild pages from scratch** using the builder script pattern instead of patching in-place.
+
+9. **Rebuilding is the only safe page update strategy.** If page copy needs updating, write a new full-page build script (like `build-services.php`) that replaces `_elementor_data` entirely with freshly generated JSON. Do not attempt to read, mutate, and re-write existing Elementor data. If a page breaks due to corrupted JSON (symptoms: page renders flush-left, unstyled, or blank), re-import that page from the Astra Starter Templates plugin in WP admin (Appearance → Starter Templates → Balor), then rebuild any custom sections on top.
+
+### Footer
+- Widget areas: `footer-widget-1` (description) and `footer-widget-2` (contact info) — Gutenberg block widgets stored in `widget_block` option, entries 7 and 8.
+- Copyright text: `footer-sml-section-1-credit` key inside `astra-settings` option. Uses `[current_year]` and `[site_title]` dynamic tags.
+- Update via `update_option()` in a `wp eval-file` script.
+
+---
+
 ### VPS Proxy (api.nethost.co)
 
 PHP scripts at `/home/api.nethost.co/public_html/` on the VPS handle operations requiring server-side CyberPanel or Namecheap API access:
@@ -350,6 +452,9 @@ Both variants show a 48-hour propagation notice.
 - Update this CLAUDE.md whenever new components, routes, or architectural decisions are added
 - Deploy Edge Functions via: `supabase functions deploy <name> --project-ref qsvwdemwttwrqgvsonql`
 - Deploy PHP changes via SCP with SSH key: `scp -i ~/.ssh/nethost_vps <file> root@76.13.118.227:/home/api.nethost.co/public_html/<file>`
+- When building Elementor pages programmatically, keep all HTML strings on single lines — no literal newlines
+- Store new VPS-side PHP scripts in `vps-files/` locally so they're version-controlled
+- Use `/usr/bin/wp --allow-root` as the WP-CLI path on the VPS (not `/usr/local/bin/wp`)
 
 ### Don't
 - Don't use dynamic Tailwind class construction (`bg-${color}-500`) — Tailwind purges these
@@ -360,6 +465,10 @@ Both variants show a 48-hour propagation notice.
 - Don't use `CardElement` from Stripe — use `PaymentElement` (switched for proper billing address / AVS handling)
 - Don't use `sshpass` for VPS operations — SSH key auth is configured (`~/.ssh/nethost_vps`)
 - Don't store sensitive secrets (keys, passwords) in CLAUDE.md or memory files
+- Don't use HTML entities like `&#10003;` in Elementor text-editor HTML — use Unicode chars directly (`✓`)
+- Don't put `background_color` on a container without also setting `background_background: 'classic'` — the color won't render
+- Don't use `json_decode` → modify array → `wp_json_encode` → `update_post_meta` to patch existing Elementor page data — any `"` in replacement HTML (quotes in copy, attribute values, etc.) will corrupt the JSON and break the page. Rebuild pages from scratch instead.
+- Don't try to update Elementor widget copy via find-replace on the decoded PHP array (`walk_update()` pattern) — it is fragile and caused the Home + Contact page corruption incident. Always write a complete fresh build script for any page that needs copy changes.
 
 ---
 
@@ -369,6 +478,14 @@ Both variants show a 48-hour propagation notice.
 - [ ] Dedicated IP as a Pro differentiator — requires Cloudways provisioning changes; not yet implemented
 - [ ] Automated site cleanup on cancellation — delete from CyberPanel/Cloudways after billing period ends; currently manual
 - [ ] Cloudways multi-server strategy — all Business/Pro customers share one server; need plan for when to add a second
+- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID` in Supabase Edge Function secrets once a Cloudways template app is built (Business/Pro equivalent of the CyberPanel template clone)
+- [ ] Email SMTP for Starter sites — options: managed Resend auto-config via WP-CLI during provisioning, or customer self-service
+- [ ] UpdraftPlus configured on template site — customers inherit backup plugin pre-installed
+- [ ] Template site: swap placeholder split-section image on Services page with a generated/custom photo (see prompt in `vps-files/build-services.php` comments)
+- [ ] **BROKEN: Home (ID 18) and Contact (ID 138) pages** — corrupted by `walk_update()` patch script. Home renders unstyled (flush-left); Contact still has Lorem ipsum. Fix: re-import both pages from Astra Starter Templates in WP admin, then write dedicated full-rebuild scripts for each (like `build-services.php`). Do NOT use the deprecated `update-template-pages.php`.
+- [x] Services (ID 142) and About (ID 137) — fully rebuilt, working correctly
+- [x] Footer updated — widget areas 7 + 8 updated, copyright text cleaned
+- [x] MU plugin deployed
 - [x] Enable Cloudways SMTP addon on nethost-business server — configured with Resend SMTP (smtp.resend.com, port 587, username: resend, dedicated `cloudways-smtp` API key). All Business/Pro WordPress sites can now send email.
 - [x] Clean up stale Stripe webhooks — removed DFP WooCommerce endpoint and link-spark endpoint
 
