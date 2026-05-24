@@ -2,10 +2,10 @@ import { Check } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 
 const TEMPLATES = [
-  { id: 'Bold', gradient: 'from-zinc-800 to-black', accent: '#ffffff', desc: 'Strong typography, high contrast.' },
-  { id: 'Minimal', gradient: 'from-slate-600 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.' },
-  { id: 'Corporate', gradient: 'from-blue-700 to-blue-900', accent: '#60a5fa', desc: 'Professional, structured, trustworthy.' },
-  { id: 'Blank', gradient: 'from-gray-700 to-gray-900', accent: '#6b7280', desc: 'Empty canvas — build from scratch.' },
+  { id: 'Bold', gradient: 'from-zinc-800 to-black', accent: '#ffffff', desc: 'Strong typography, high contrast.', preview: 'https://template-corporate.nethost.co' },
+  { id: 'Minimal', gradient: 'from-slate-600 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.', preview: 'https://template.nethost.co' },
+  { id: 'Corporate', gradient: 'from-blue-700 to-blue-900', accent: '#60a5fa', desc: 'Professional, structured, trustworthy.', preview: 'https://template-minimal.nethost.co' },
+  { id: 'Blank', gradient: 'from-gray-700 to-gray-900', accent: '#6b7280', desc: 'Empty canvas — build from scratch.', preview: null },
 ];
 
 function TemplateThumbnail({ template, selected, onClick }) {
@@ -50,7 +50,20 @@ function TemplateThumbnail({ template, selected, onClick }) {
         )}
       </div>
       <div className="p-3 text-left">
-        <p className={`text-sm font-bold mb-0.5 ${selected ? 'text-cyan-400' : 'text-slate-200'}`}>{template.id}</p>
+        <div className="flex items-center justify-between gap-2 mb-0.5">
+          <p className={`text-sm font-bold ${selected ? 'text-cyan-400' : 'text-slate-200'}`}>{template.id}</p>
+          {template.preview && (
+            <a
+              href={template.preview}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] font-semibold text-cyan-500 hover:text-cyan-300 transition shrink-0"
+            >
+              Preview →
+            </a>
+          )}
+        </div>
         <p className="text-slate-500 text-xs">{template.desc}</p>
       </div>
     </button>
