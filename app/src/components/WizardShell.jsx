@@ -4,9 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 
 const STEPS = [
   'Plan',
-  'Domain',
-  'Site Type',
   'Template',
+  'Domain',
   'Identity',
   'Review',
   'Launch',
@@ -17,9 +16,9 @@ export default function WizardShell({ children }) {
   const { step, setStep, canAdvance } = useWizard();
   const { logout } = useAuth();
 
-  const isProvisioning = step === 7;
-  const isDone = step === 8;
-  const isPayment = step === 6;
+  const isProvisioning = step === 6;
+  const isDone = step === 7;
+  const isPayment = step === 5;
   const hideNav = isProvisioning || isDone || isPayment;
 
   return (
@@ -32,7 +31,7 @@ export default function WizardShell({ children }) {
         <div className="flex items-center gap-4">
           {!isProvisioning && !isDone && (
             <span className="text-slate-500 text-xs font-medium">
-              Step {step} of 6
+              Step {step} of 5
             </span>
           )}
           <a
@@ -57,7 +56,7 @@ export default function WizardShell({ children }) {
         <div className="px-6 md:px-10 pt-6 pb-2 shrink-0">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center gap-1.5">
-              {STEPS.slice(0, 6).map((label, i) => {
+              {STEPS.slice(0, 5).map((label, i) => {
                 const num = i + 1;
                 const isComplete = step > num;
                 const isActive = step === num;
@@ -117,7 +116,7 @@ export default function WizardShell({ children }) {
               disabled={!canAdvance()}
               className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-8 py-2.5 rounded-full hover:opacity-90 transition disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {step === 6 ? 'Launch My Website →' : 'Continue →'}
+              {step === 5 ? 'Launch My Website →' : 'Continue →'}
             </button>
           </div>
         </footer>

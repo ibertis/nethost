@@ -2,12 +2,10 @@ import { Check } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 
 const TEMPLATES = [
-  { id: 'Minimal', gradient: 'from-slate-700 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.' },
-  { id: 'Bold', gradient: 'from-violet-700 to-purple-900', accent: '#a78bfa', desc: 'Strong typography, high contrast.' },
+  { id: 'Bold', gradient: 'from-zinc-800 to-black', accent: '#ffffff', desc: 'Strong typography, high contrast.' },
+  { id: 'Minimal', gradient: 'from-slate-600 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.' },
   { id: 'Corporate', gradient: 'from-blue-700 to-blue-900', accent: '#60a5fa', desc: 'Professional, structured, trustworthy.' },
-  { id: 'Creative', gradient: 'from-rose-600 to-orange-700', accent: '#fb923c', desc: 'Expressive, colorful, memorable.' },
-  { id: 'Modern', gradient: 'from-cyan-600 to-teal-800', accent: '#22d3ee', desc: 'Tech-forward, dynamic layout.' },
-  { id: 'Classic', gradient: 'from-amber-700 to-stone-800', accent: '#fbbf24', desc: 'Timeless, warm, editorial feel.' },
+  { id: 'Blank', gradient: 'from-gray-700 to-gray-900', accent: '#6b7280', desc: 'Empty canvas — build from scratch.' },
 ];
 
 function TemplateThumbnail({ template, selected, onClick }) {
@@ -18,20 +16,30 @@ function TemplateThumbnail({ template, selected, onClick }) {
     >
       {/* Preview block */}
       <div className={`bg-gradient-to-br ${template.gradient} h-28 w-full relative`}>
-        {/* Fake nav */}
-        <div className="absolute top-3 left-3 right-3 flex items-center gap-1.5">
-          <div className="w-6 h-1.5 rounded-full bg-white/40" />
-          <div className="ml-auto flex gap-1">
-            <div className="w-4 h-1 rounded-full bg-white/20" />
-            <div className="w-4 h-1 rounded-full bg-white/20" />
-            <div className="w-6 h-1 rounded-full" style={{ background: template.accent + '99' }} />
+        {template.id === 'Blank' ? (
+          <div className="absolute inset-0 flex items-center justify-center opacity-20">
+            <div className="grid grid-cols-3 gap-1.5">
+              {[...Array(9)].map((_, i) => <div key={i} className="w-4 h-4 rounded border border-white/40" />)}
+            </div>
           </div>
-        </div>
-        {/* Fake hero text */}
-        <div className="absolute bottom-4 left-3">
-          <div className="w-20 h-2.5 rounded-full bg-white/60 mb-1.5" />
-          <div className="w-14 h-1.5 rounded-full bg-white/30" />
-        </div>
+        ) : (
+          <>
+            {/* Fake nav */}
+            <div className="absolute top-3 left-3 right-3 flex items-center gap-1.5">
+              <div className="w-6 h-1.5 rounded-full bg-white/40" />
+              <div className="ml-auto flex gap-1">
+                <div className="w-4 h-1 rounded-full bg-white/20" />
+                <div className="w-4 h-1 rounded-full bg-white/20" />
+                <div className="w-6 h-1 rounded-full" style={{ background: template.accent + '99' }} />
+              </div>
+            </div>
+            {/* Fake hero text */}
+            <div className="absolute bottom-4 left-3">
+              <div className="w-20 h-2.5 rounded-full bg-white/60 mb-1.5" />
+              <div className="w-14 h-1.5 rounded-full bg-white/30" />
+            </div>
+          </>
+        )}
         {/* Selected overlay */}
         {selected && (
           <div className="absolute inset-0 bg-cyan-500/20 flex items-center justify-center">
@@ -55,7 +63,7 @@ export default function Step4Template() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-2xl animate-[fade-up_0.4s_ease_forwards]">
-        <p className="text-xs font-semibold uppercase tracking-widest text-cyan-500 mb-3 text-center">Step 4</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-cyan-500 mb-3 text-center">Step 2</p>
         <h1 className="text-3xl md:text-4xl font-black text-white text-center tracking-tight mb-2">
           Pick a Starting Style
         </h1>
@@ -63,7 +71,7 @@ export default function Step4Template() {
           Choose a visual direction. You can customize everything later.
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {TEMPLATES.map((t) => (
             <TemplateThumbnail
               key={t.id}

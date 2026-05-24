@@ -7,7 +7,6 @@ import Dashboard from './pages/Dashboard';
 import Account from './pages/Account';
 import Step1Plan from './components/steps/Step1Plan';
 import Step2Domain from './components/steps/Step2Domain';
-import Step3SiteType from './components/steps/Step3SiteType';
 import Step4Template from './components/steps/Step4Template';
 import Step5Identity from './components/steps/Step5Identity';
 import Step6Review from './components/steps/Step6Review';
@@ -16,13 +15,12 @@ import Step8Done from './components/steps/Step8Done';
 
 const STEPS = {
   1: Step1Plan,
-  2: Step2Domain,
-  3: Step3SiteType,
-  4: Step4Template,
-  5: Step5Identity,
-  6: Step6Review,
-  7: Step7Provisioning,
-  8: Step8Done,
+  2: Step4Template,
+  3: Step2Domain,
+  4: Step5Identity,
+  5: Step6Review,
+  6: Step7Provisioning,
+  7: Step8Done,
 };
 
 function WizardContent() {

@@ -25,11 +25,9 @@ export function WizardProvider({ children, onGoToDashboard, initialData = {} }) 
 
   const canAdvance = () => {
     if (step === 1) return !!data.plan;
-    if (step === 2) return !!data.domain;
-    if (step === 3) return !!data.siteType;
-    if (step === 4) return !!data.template;
-    if (step === 5) return !!data.identity.name;
-    if (step === 6) return true;
+    if (step === 2) return !!data.template;
+    if (step === 3) return !!data.domain;
+    if (step === 4) return !!data.identity.name;
     return true;
   };
 

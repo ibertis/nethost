@@ -354,6 +354,10 @@ STRIPE_PRICE_BUSINESS_TEST     # Test mode price ID for Business
 STRIPE_PRICE_PRO_TEST          # Test mode price ID for Pro
 CLOUDWAYS_EMAIL
 CLOUDWAYS_API_KEY
+CLOUDWAYS_TEMPLATE_APP_ID_BOLD        # Cloudways app ID for Bold (Balor) template
+CLOUDWAYS_TEMPLATE_APP_ID_MINIMAL     # Cloudways app ID for Minimal template
+CLOUDWAYS_TEMPLATE_APP_ID_CORPORATE   # Cloudways app ID for Corporate template
+# CLOUDWAYS_TEMPLATE_APP_ID still accepted as a generic fallback
 NAMECHEAP_API_USER
 NAMECHEAP_API_KEY
 PROXY_URL_CYBERPANEL           # https://api.nethost.co/provision-cyberpanel.php
@@ -482,6 +486,10 @@ Both variants show a 48-hour propagation notice.
 - [ ] Email SMTP for Starter sites — options: managed Resend auto-config via WP-CLI during provisioning, or customer self-service
 - [ ] UpdraftPlus configured on template site — customers inherit backup plugin pre-installed
 - [ ] Template site: swap placeholder split-section image on Services page with a generated/custom photo (see prompt in `vps-files/build-services.php` comments)
+- [ ] Build Minimal template site (`template-minimal.nethost.co`) on VPS — new CyberPanel site + Astra starter + Elementor pages
+- [ ] Build Corporate template site (`template-corporate.nethost.co`) on VPS — same process
+- [ ] Build Blank template site (`template-blank.nethost.co`) on VPS — WP + Elementor + Astra, no page content
+- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID_BOLD`, `_MINIMAL`, `_CORPORATE` in Supabase secrets once Cloudways template apps are built
 - [ ] **BROKEN: Home (ID 18) and Contact (ID 138) pages** — corrupted by `walk_update()` patch script. Home renders unstyled (flush-left); Contact still has Lorem ipsum. Fix: re-import both pages from Astra Starter Templates in WP admin, then write dedicated full-rebuild scripts for each (like `build-services.php`). Do NOT use the deprecated `update-template-pages.php`.
 - [x] Services (ID 142) and About (ID 137) — fully rebuilt, working correctly
 - [x] Footer updated — widget areas 7 + 8 updated, copyright text cleaned

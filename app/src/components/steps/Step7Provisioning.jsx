@@ -77,6 +77,7 @@ export default function Step7Provisioning() {
                 plan:                   data.plan,
                 domain:                 data.domain,
                 siteName:               data.identity?.name || data.domain,
+                template:               data.template       ?? 'Bold',
                 userId:                 currentUser?.id      ?? null,
                 stripeCustomerId:       data.stripeCustomerId      ?? null,
                 stripeSubscriptionId:   data.stripeSubscriptionId  ?? null,

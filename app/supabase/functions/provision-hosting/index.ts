@@ -47,7 +47,7 @@ async function setDnsRecords(domain: string, ip: string): Promise<void> {
 }
 
 // --- Cloudways provisioning (Business / Pro plans) ---
-async function provisionCloudways(domain: string, siteName: string) {
+async function provisionCloudways(domain: string, siteName: string, template = 'Bold') {
   const email  = Deno.env.get('CLOUDWAYS_EMAIL')!;
   const apiKey = Deno.env.get('CLOUDWAYS_API_KEY')!;
 
@@ -72,11 +72,14 @@ async function provisionCloudways(domain: string, siteName: string) {
   const server = servers[0];
   const serverIp = server.public_ip ?? server.master_ip;
 
-  // Step 3: Clone the golden template app (instead of creating a blank WP install)
-  // Set CLOUDWAYS_TEMPLATE_APP_ID in Supabase Edge Function secrets to your template app's ID.
-  // If no template is configured, fall back to creating a blank WordPress install.
+  // Step 3: Clone the template app that matches the customer's selection.
+  // Env var per template: CLOUDWAYS_TEMPLATE_APP_ID_BOLD, _MINIMAL, _CORPORATE.
+  // Falls back to the generic CLOUDWAYS_TEMPLATE_APP_ID if the specific one isn't set.
+  // 'Blank' skips cloning — customer gets a fresh WordPress install.
   const appLabel = siteName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase().slice(0, 30);
-  const templateAppId = Deno.env.get('CLOUDWAYS_TEMPLATE_APP_ID');
+  const templateAppId = template === 'Blank'
+    ? null
+    : (Deno.env.get(`CLOUDWAYS_TEMPLATE_APP_ID_${template.toUpperCase()}`) ?? Deno.env.get('CLOUDWAYS_TEMPLATE_APP_ID'));
   let appData: any;
 
   if (templateAppId) {
@@ -164,14 +167,14 @@ async function provisionCloudways(domain: string, siteName: string) {
 }
 
 // --- CyberPanel provisioning (Starter plan) ---
-async function provisionCyberPanel(domain: string) {
+async function provisionCyberPanel(domain: string, template = 'Bold') {
   const proxyUrl    = Deno.env.get('PROXY_URL_CYBERPANEL')!;
   const proxySecret = Deno.env.get('PROXY_SECRET')!;
 
   const res = await fetch(proxyUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
-    body: JSON.stringify({ domain }),
+    body: JSON.stringify({ domain, template }),
   });
   const raw = await res.text();
   if (!raw) throw new Error(`PHP proxy empty response — HTTP ${res.status}`);
@@ -191,7 +194,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { plan, domain, siteName, userId, stripeCustomerId, stripeSubscriptionId } = await req.json();
+    const { plan, domain, siteName, template, userId, stripeCustomerId, stripeSubscriptionId } = await req.json();
     if (!plan || !domain) {
       return new Response(JSON.stringify({ error: 'plan and domain required' }), { status: 400, headers: CORS });
     }
@@ -250,12 +253,13 @@ serve(async (req) => {
       }
     }
 
+    const selectedTemplate = template ?? 'Bold';
     let result;
     if (plan === 'Starter') {
-      result = await provisionCyberPanel(domain);
+      result = await provisionCyberPanel(domain, selectedTemplate);
     } else {
       // Business or Pro → Cloudways
-      result = await provisionCloudways(domain, siteName ?? domain);
+      result = await provisionCloudways(domain, siteName ?? domain, selectedTemplate);
     }
 
     // Update the order row with credentials and mark active
