@@ -14,14 +14,14 @@ const PLANS = [
     name: 'Business',
     price: '$49',
     tagline: 'For growing businesses.',
-    features: ['Managed WordPress hosting', 'Free domain (1st year)', 'Staging environment', 'Priority support'],
+    features: ['Managed WordPress hosting', 'Free domain (1st year)', 'White-glove WordPress setup', 'Priority support'],
     popular: true,
   },
   {
     name: 'Pro',
     price: '$99',
-    tagline: 'Maximum performance.',
-    features: ['Managed VPS hosting', 'Free domain (1st year)', 'Dedicated resources', 'Dedicated account manager'],
+    tagline: 'For businesses where downtime costs money.',
+    features: ['Dedicated IP + staging environment', 'Hourly backups + 1-click restore', 'Uptime monitoring + instant alerts', '4-hour priority support SLA'],
   },
 ];
 

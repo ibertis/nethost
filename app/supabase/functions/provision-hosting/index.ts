@@ -72,26 +72,45 @@ async function provisionCloudways(domain: string, siteName: string) {
   const server = servers[0];
   const serverIp = server.public_ip ?? server.master_ip;
 
-  // Step 3: Create WordPress application
+  // Step 3: Clone the golden template app (instead of creating a blank WP install)
+  // Set CLOUDWAYS_TEMPLATE_APP_ID in Supabase Edge Function secrets to your template app's ID.
+  // If no template is configured, fall back to creating a blank WordPress install.
   const appLabel = siteName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase().slice(0, 30);
-  const appRes = await fetch('https://api.cloudways.com/api/v1/app', {
-    method: 'POST',
-    headers: authHeaders,
-    body: JSON.stringify({
-      server_id:    server.id,
-      application:  'wordpress',
-      app_label:    appLabel,
-      project_name: domain,
-    }),
-  });
-  const appData = await appRes.json();
-  // Cloudways returns {status:true, operation_id:"..."} on success — no app object yet
-  if (!appData?.status) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
+  const templateAppId = Deno.env.get('CLOUDWAYS_TEMPLATE_APP_ID');
+  let appData: any;
+
+  if (templateAppId) {
+    const cloneRes = await fetch('https://api.cloudways.com/api/v1/app/clone', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        server_id:    server.id,
+        app_id:       templateAppId,
+        app_label:    appLabel,
+        project_name: domain,
+      }),
+    });
+    appData = await cloneRes.json();
+    if (!appData?.status) throw new Error(`Cloudways app clone failed: ${JSON.stringify(appData)}`);
+  } else {
+    const createRes = await fetch('https://api.cloudways.com/api/v1/app', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        server_id:    server.id,
+        application:  'wordpress',
+        app_label:    appLabel,
+        project_name: domain,
+      }),
+    });
+    appData = await createRes.json();
+    if (!appData?.status) throw new Error(`Cloudways app creation failed: ${JSON.stringify(appData)}`);
+  }
 
   // Step 4: Poll app list until our new app appears with credentials (max ~150s)
   // Initial 30s wait — app creation is async and WP install takes time
   await new Promise(r => setTimeout(r, 30000));
-  let wpCreds: { username?: string; password?: string } = {};
+  let wpCreds: { username?: string; password?: string; _appId?: string } = {};
   for (let i = 0; i < 12; i++) {
     if (i > 0) await new Promise(r => setTimeout(r, 10000));
     // Poll /server — each server object includes its apps array with credentials
@@ -111,11 +130,27 @@ async function provisionCloudways(domain: string, siteName: string) {
       const c = app.creds?.[0] ?? app.app_credentials?.[0] ?? {};
       const user = c.username ?? c.user ?? c.wp_user ?? app.wp_user ?? app.sys_user ?? app.username;
       const pass = c.password ?? c.pass ?? c.wp_password ?? app.wp_password ?? app.sys_password ?? app.password;
-      if (user && pass) { wpCreds = { username: user, password: pass }; break; }
+      if (user && pass) { wpCreds = { username: user, password: pass, _appId: app.id }; break; }
     }
   }
 
   if (!wpCreds.username) throw new Error('Cloudways app deployed but could not retrieve WP credentials');
+
+  // If we cloned a template, update the primary domain on the new app.
+  // Cloudways writes WP_SITEURL and WP_HOME constants into wp-config.php,
+  // which overrides the template URLs still sitting in the database.
+  if (templateAppId && wpCreds._appId) {
+    await fetch('https://api.cloudways.com/api/v1/app/manage/domainUpdate', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        server_id:  server.id,
+        app_id:     wpCreds._appId,
+        primary_domain: domain,
+        www_is_preferred: 0,
+      }),
+    }).catch(() => {/* non-fatal — DNS update can be done manually if needed */});
+  }
 
   await setDnsRecords(domain, serverIp);
 
