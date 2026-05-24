@@ -249,6 +249,17 @@ scp -i ~/.ssh/nethost_vps <local-file> root@76.13.118.227:/tmp/<file>
 - **Page builder:** Elementor 4.x — flexbox container format (`elType: "container"`)
 - **Font:** Poppins loaded via Google Fonts / Astra theme
 
+### Template Sites (Wizard Selection)
+| Wizard Option | VPS Domain | Design | Plugins |
+|---|---|---|---|
+| Minimal | `template.nethost.co` | Astra Balor | Elementor, Astra Sites |
+| Corporate | `template-minimal.nethost.co` | Digital Agency | Elementor, UAE, SureForms, LatePoint |
+| Bold | `template-corporate.nethost.co` | David Williams | Elementor, WPForms Lite |
+| Blank | `template-blank.nethost.co` | Astra + Elementor only | Elementor |
+
+All template sites use `admin` / `NHtemplate25!` (internal use — change via WP admin).
+Provisioning maps are in `vps-files/provision-cyberpanel.php` → `$templateMap`.
+
 ### Page IDs
 | Page | ID | Notes |
 |---|---|---|
@@ -486,10 +497,8 @@ Both variants show a 48-hour propagation notice.
 - [ ] Email SMTP for Starter sites — options: managed Resend auto-config via WP-CLI during provisioning, or customer self-service
 - [ ] UpdraftPlus configured on template site — customers inherit backup plugin pre-installed
 - [ ] Template site: swap placeholder split-section image on Services page with a generated/custom photo (see prompt in `vps-files/build-services.php` comments)
-- [ ] Build Minimal template site (`template-minimal.nethost.co`) on VPS — new CyberPanel site + Astra starter + Elementor pages
-- [ ] Build Corporate template site (`template-corporate.nethost.co`) on VPS — same process
-- [ ] Build Blank template site (`template-blank.nethost.co`) on VPS — WP + Elementor + Astra, no page content
-- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID_BOLD`, `_MINIMAL`, `_CORPORATE` in Supabase secrets once Cloudways template apps are built
+- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID_BOLD`, `_MINIMAL`, `_CORPORATE` in Supabase secrets once Cloudways template apps are built (Business/Pro tier equivalent)
+- [x] All 4 Starter template sites built and live on VPS
 - [ ] **BROKEN: Home (ID 18) and Contact (ID 138) pages** — corrupted by `walk_update()` patch script. Home renders unstyled (flush-left); Contact still has Lorem ipsum. Fix: re-import both pages from Astra Starter Templates in WP admin, then write dedicated full-rebuild scripts for each (like `build-services.php`). Do NOT use the deprecated `update-template-pages.php`.
 - [x] Services (ID 142) and About (ID 137) — fully rebuilt, working correctly
 - [x] Footer updated — widget areas 7 + 8 updated, copyright text cleaned
