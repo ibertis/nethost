@@ -3,9 +3,9 @@ import { Check, X } from 'lucide-react';
 import { useWizard } from '../../context/WizardContext';
 
 const TEMPLATES = [
-  { id: 'Bold', gradient: 'from-zinc-800 to-black', accent: '#ffffff', desc: 'Strong typography, high contrast.', preview: 'https://template-corporate.nethost.co' },
-  { id: 'Minimal', gradient: 'from-slate-600 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.', preview: 'https://template.nethost.co' },
-  { id: 'Corporate', gradient: 'from-blue-700 to-blue-900', accent: '#60a5fa', desc: 'Professional, structured, trustworthy.', preview: 'https://template-minimal.nethost.co' },
+  { id: 'Bold', gradient: 'from-zinc-800 to-black', accent: '#ffffff', desc: 'Strong typography, high contrast.', preview: 'https://template.nethost.co' },
+  { id: 'Minimal', gradient: 'from-slate-600 to-slate-900', accent: '#94a3b8', desc: 'Clean lines, generous whitespace.', preview: 'https://template-minimal.nethost.co' },
+  { id: 'Corporate', gradient: 'from-blue-700 to-blue-900', accent: '#60a5fa', desc: 'Professional, structured, trustworthy.', preview: 'https://template-corporate.nethost.co' },
   { id: 'Blank', gradient: 'from-gray-700 to-gray-900', accent: '#6b7280', desc: 'Empty canvas — build from scratch.', preview: null },
 ];
 
