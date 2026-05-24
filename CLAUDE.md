@@ -252,10 +252,10 @@ scp -i ~/.ssh/nethost_vps <local-file> root@76.13.118.227:/tmp/<file>
 ### Page IDs
 | Page | ID | Notes |
 |---|---|---|
-| Home | 18 | Customised hero copy |
-| About | 137 | Full rebuild — hero / story split / values / CTA |
-| Services | 142 | Full rebuild — hero / 3 cards / split / process / stats / CTA |
-| Contact | 138 | Updated copy, icon-boxes retained |
+| Home | 165 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
+| About | 168 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
+| Services | 142 | Full rebuild — hero / 3 cards / split / process / stats / CTA (`vps-files/build-services.php`) |
+| Contact | 169 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
 | Privacy Policy | 3 | Draft |
 
 ### Media Library (Balor Template Images)
