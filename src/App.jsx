@@ -18,6 +18,7 @@ import ServicesPage from './pages/Services';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
+import About from './pages/About';
 
 function HomePage({ onContactOpen }) {
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/" element={<HomePage onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/resources" element={<Resources onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/services" element={<ServicesPage onContactOpen={() => setContactOpen(true)} />} />
+        <Route path="/about" element={<About onContactOpen={() => setContactOpen(true)} />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="*" element={<NotFound />} />

@@ -9,7 +9,7 @@ const LINKS = {
     { label: 'Branding & Identity', href: '/services#branding' },
   ],
   Company: [
-    { label: 'About', href: '/' },
+    { label: 'About', href: '/about' },
     { label: 'Process', href: '/#process' },
     { label: 'Pricing', href: '/#pricing' },
     { label: 'Testimonials', href: '/#testimonials' },
@@ -107,7 +107,7 @@ export default function Footer({ onContactOpen }) {
 
         {/* Bottom bar */}
         <div className="border-t border-white/[0.05] pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-slate-600 text-xs">© 2026 NETHOST. All rights reserved.</p>
+          <p className="text-slate-600 text-xs">© 2026 NETHOST. All rights reserved. Founded by <a href="/about" className="hover:text-slate-400 transition">Gabriel Ibertis</a>.</p>
           <div className="flex items-center gap-4">
             <a href="/terms" className="text-slate-700 hover:text-slate-500 transition text-xs">Terms of Service</a>
             <a href="/privacy" className="text-slate-700 hover:text-slate-500 transition text-xs">Privacy Policy</a>
