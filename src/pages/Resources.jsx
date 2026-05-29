@@ -53,6 +53,9 @@ const TOOLS = [
 export default function Toolkit({ onContactOpen }) {
   useEffect(() => {
     document.title = 'Resources & Tools | NETHOST';
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = 'https://nethost.co/resources';
+    return () => { if (canonical) canonical.href = 'https://nethost.co/'; };
   }, []);
 
   return (

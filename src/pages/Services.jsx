@@ -124,6 +124,9 @@ export default function ServicesPage({ onContactOpen }) {
         'NETHOST offers professional brand identity design, custom website development, digital marketing, and AI automation services for small businesses and entrepreneurs.',
       );
     }
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = 'https://nethost.co/services';
+
     return () => {
       document.title = 'NETHOST — Managed Web Hosting for Entrepreneurs & Small Businesses';
       if (meta) {
@@ -132,6 +135,7 @@ export default function ServicesPage({ onContactOpen }) {
           'NETHOST provides fully managed web hosting, website design, and digital services for entrepreneurs and small businesses. Fast, secure, and handled — so you can focus on running your business.',
         );
       }
+      if (canonical) canonical.href = 'https://nethost.co/';
     };
   }, []);
 

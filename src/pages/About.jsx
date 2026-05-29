@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowUpRight } from 'lucide-react';
+import BeamsBackground from '../components/BeamsBackground';
 import CtaBanner from '../components/CtaBanner';
 import Footer from '../components/Footer';
 
@@ -29,6 +30,9 @@ export default function About({ onContactOpen }) {
       );
     }
 
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.href = 'https://nethost.co/about';
+
     const script = document.createElement('script');
     script.type = 'application/ld+json';
     script.id = 'person-schema';
@@ -43,14 +47,16 @@ export default function About({ onContactOpen }) {
           'NETHOST provides fully managed web hosting, website design, and digital services for entrepreneurs and small businesses. Fast, secure, and handled — so you can focus on running your business.',
         );
       }
+      if (canonical) canonical.href = 'https://nethost.co/';
       document.getElementById('person-schema')?.remove();
     };
   }, []);
 
   return (
     <>
-      <main className="pt-32 pb-24 bg-[#050914]">
-        <div className="max-w-3xl mx-auto px-6">
+      <main className="pt-32 pb-24 bg-[#050914] relative overflow-hidden">
+        <BeamsBackground intensity="faint" />
+        <div className="max-w-3xl mx-auto px-6 relative z-10">
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-8 mb-10">
             <img
