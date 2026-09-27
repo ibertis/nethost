@@ -206,7 +206,7 @@ app/src/
 | `stripe-webhook` | Handles Stripe subscription lifecycle events (payment_succeeded, payment_failed, subscription.deleted, subscription.updated) → updates `orders.status`. Uses HMAC SHA-256 signature verification (no Stripe SDK). Uses service-role key for DB updates. **Must be deployed with `--no-verify-jwt`** (Stripe webhooks don't include Supabase JWTs). Registered in Stripe as NETHOST-SignUp webhook pointing to `https://qsvwdemwttwrqgvsonql.supabase.co/functions/v1/stripe-webhook`. |
 | `domain-check` | Checks Namecheap availability + price via PHP proxy |
 | `domain-register` | Registers domain via Namecheap PHP proxy |
-| `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap; returns `{ wpAdminUrl, username, password, email, serverIp }`. **Before provisioning:** uses service-role key to insert an `orders` row with `status: 'provisioning'` (reuses existing provisioning row on retry). **After success:** updates row with credentials and `status: 'active'`. Step7 no longer does its own DB insert. Cloudways path: creates app via POST /app, waits 30s, then polls GET /server every 10s (up to 12×) to find app + credentials in server.apps array. Credentials may be at top-level app fields (sys_user/sys_password) not nested under creds[]. |
+| `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap; returns `{ wpAdminUrl, username, password, email, serverIp }`. **Before provisioning:** uses service-role key to insert an `orders` row with `status: 'provisioning'` (reuses existing provisioning row on retry). **After success:** updates row with credentials and `status: 'active'`. Step7 no longer does its own DB insert. Cloudways path: authenticates with `CLOUDWAYS_ACCESS_TOKEN` as a Bearer token (no OAuth exchange), creates app via POST /app, waits 30s, then polls GET /server every 10s (up to 12×) to find app + credentials in server.apps array. Credentials may be at top-level app fields (sys_user/sys_password) not nested under creds[]. |
 | `send-order-confirmation` | Branded HTML email via Resend — includes domain, plan, wp-admin URL, username. Does NOT include password (security). |
 | `contact-send` | Contact form → email to hello@nethost.co via Resend |
 | `create-portal-session` | Creates Stripe Customer Portal session → returns redirect URL |
@@ -363,8 +363,7 @@ STRIPE_SECRET_KEY_TEST         # Test mode secret key (optional — for local te
 STRIPE_PRICE_STARTER_TEST      # Test mode price ID for Starter
 STRIPE_PRICE_BUSINESS_TEST     # Test mode price ID for Business
 STRIPE_PRICE_PRO_TEST          # Test mode price ID for Pro
-CLOUDWAYS_EMAIL
-CLOUDWAYS_API_KEY
+CLOUDWAYS_ACCESS_TOKEN                # Cloudways Access Token "NETHOST provision hosting" (Full Access, no expiry); sent directly as Bearer. Replaced legacy CLOUDWAYS_EMAIL + CLOUDWAYS_API_KEY on 2026-09-27 (API keys retired 2026-10-15)
 CLOUDWAYS_TEMPLATE_APP_ID_BOLD        # Cloudways app ID for Bold (Balor) template
 CLOUDWAYS_TEMPLATE_APP_ID_MINIMAL     # Cloudways app ID for Minimal template
 CLOUDWAYS_TEMPLATE_APP_ID_CORPORATE   # Cloudways app ID for Corporate template
