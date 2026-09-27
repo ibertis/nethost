@@ -47,56 +47,19 @@ async function setDnsRecords(domain: string, ip: string): Promise<void> {
 }
 
 // --- Cloudways auth ---
-// Cloudways retires legacy API keys on 2026-10-15 in favor of Access Tokens
-// (dashboard → API Integration). Their public docs don't yet say whether the new
-// token is sent directly as a Bearer token or still exchanged at
-// /oauth/access_token, so we support both and log which one worked:
-//   1. CLOUDWAYS_ACCESS_TOKEN set → try it directly (read-only GET /server probe),
-//      then fall back to exchanging it at /oauth/access_token.
-//   2. Otherwise → legacy CLOUDWAYS_EMAIL + CLOUDWAYS_API_KEY exchange
-//      (stops working 2026-10-15).
-async function exchangeCloudwaysToken(email: string, apiKey: string): Promise<string | null> {
-  const res = await fetch('https://api.cloudways.com/api/v1/oauth/access_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, api_key: apiKey }),
-  });
-  const data = await res.json().catch(() => ({}));
-  return data?.access_token ?? null;
-}
-
-async function getCloudwaysBearer(): Promise<string> {
-  const email       = Deno.env.get('CLOUDWAYS_EMAIL') ?? '';
+// Uses a Cloudways Access Token (dashboard → API Integration → "NETHOST
+// provision hosting", Full Access, no expiry), sent directly as a Bearer token.
+// Verified 2026-09-27. Replaces the legacy API key, which Cloudways retires 2026-10-15.
+function getCloudwaysBearer(): string {
   const accessToken = Deno.env.get('CLOUDWAYS_ACCESS_TOKEN');
-
-  if (accessToken) {
-    const probe = await fetch('https://api.cloudways.com/api/v1/server', {
-      headers: { 'Authorization': `Bearer ${accessToken}` },
-    });
-    if (probe.ok) {
-      console.log('[cloudways] auth: access token used directly as Bearer');
-      return accessToken;
-    }
-    const exchanged = email ? await exchangeCloudwaysToken(email, accessToken) : null;
-    if (exchanged) {
-      console.log('[cloudways] auth: access token exchanged via /oauth/access_token');
-      return exchanged;
-    }
-    throw new Error(`Cloudways auth failed with CLOUDWAYS_ACCESS_TOKEN (direct probe HTTP ${probe.status}; exchange returned no token). Check the token's scope and that it hasn't been revoked.`);
-  }
-
-  const apiKey = Deno.env.get('CLOUDWAYS_API_KEY');
-  if (!apiKey) throw new Error('Cloudways auth not configured: set CLOUDWAYS_ACCESS_TOKEN');
-  const legacy = await exchangeCloudwaysToken(email, apiKey);
-  if (!legacy) throw new Error('Cloudways auth failed with legacy CLOUDWAYS_API_KEY (retired 2026-10-15). Set CLOUDWAYS_ACCESS_TOKEN.');
-  console.warn('[cloudways] auth: using legacy API key, which stops working 2026-10-15');
-  return legacy;
+  if (!accessToken) throw new Error('Cloudways auth not configured: set the CLOUDWAYS_ACCESS_TOKEN secret');
+  return accessToken;
 }
 
 // --- Cloudways provisioning (Business / Pro plans) ---
 async function provisionCloudways(domain: string, siteName: string, template = 'Bold') {
   // Step 1: Authenticate
-  const access_token = await getCloudwaysBearer();
+  const access_token = getCloudwaysBearer();
 
   const authHeaders = {
     'Authorization': `Bearer ${access_token}`,
