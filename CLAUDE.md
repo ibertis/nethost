@@ -20,6 +20,8 @@ A managed web hosting business for entrepreneurs, startups, and small businesses
 | Node | `/opt/homebrew/bin/node` — always use `export PATH="/opt/homebrew/bin:$PATH"` in Bash |
 | Package manager | npm |
 
+> **Supabase hosting (since 2026-10-13):** the NETHOST project (`qsvwdemwttwrqgvsonql`) lives in the **free "NETHOST" Supabase org**, moved out of the paid REALFORM Studios org to cut costs while there are no customers. Free-tier tradeoffs: the project **auto-pauses after 7 days of no DB activity** (signups and the Stripe webhook fail until it is restored from the dashboard) and there are no daily backups. **When the first paying customer signs up, transfer it back to the REALFORM Studios Pro org** (~$10/mo). The free org's 2nd slot is used by Permiana (`ptxrxekttwxpmmylccal`). Project URL, keys, Edge Functions and secrets were unchanged by the transfer.
+
 ---
 
 ## Hosting Infrastructure (Actual Implementation)
@@ -34,9 +36,15 @@ A managed web hosting business for entrepreneurs, startups, and small businesses
 **DNS management:** Namecheap setHosts API (sets A records pointing to server IP on provisioning)
 **Transactional email:** Resend API — order confirmations via `send-order-confirmation`; contact form via `contact-send`; auth emails (signup confirmation, password reset) via Resend SMTP configured in Supabase Auth settings
 **Payment:** Stripe subscriptions — `create-subscription` Edge Function + Stripe `PaymentElement` (client-side)
-**Billing portal:** `create-portal-session` Edge Function → Stripe Customer Portal (cancel, update payment method)
+**Billing portal:** `create-portal-session` Edge Function → Stripe Customer Portal (cancel, update payment method). Portal URLs are generated per session, so they use `billing.stripe.com`.
+
+> **Stripe custom domain removed (2026-09-27):** `billing.nethost.co` was set up as a Stripe custom domain (Checkout, Payment Links, Customer Portal), which costs **$10/month**. With no revenue, Stripe pulled the fee from the business bank account as a monthly ACH "TRANSFER" debit (~3rd of each month, `IND ID:ST-...`). Removed in Stripe (Settings → Business → Custom domains) and the `billing` CNAME deleted from Cloudflare. Nothing in the code references it. Re-add only once there are paying customers and branded billing URLs are worth $120/yr.
 **SSL:** CyberPanel handles Let's Encrypt SSL for Starter; Cloudways handles SSL for Business/Pro
-**Backups:** Starter — daily rclone cron job to Backblaze B2 (`nethost-backups` bucket, `s3.us-east-005.backblazeb2.com`); rclone remote named `backblaze` configured at `/root/.config/rclone/rclone.conf`; script at `/usr/local/bin/nethost-backup.sh`; runs `0 2 * * *`. Business/Pro — Cloudways built-in.
+**Backups:** Starter — daily rclone cron job (**database-only since 2026-07-24**, see gotcha note below) to Backblaze B2 (`nethost-backups` bucket, `s3.us-east-005.backblazeb2.com`); rclone remote named `backblaze` configured at `/root/.config/rclone/rclone.conf`; script at `/usr/local/bin/nethost-backup.sh`; runs `0 2 * * *`. All 4 VPS template sites also have UpdraftPlus installed (weekly schedule, retain 2 copies) backing up to the same B2 bucket via S3-Compatible (Generic) endpoint; path prefix per site is `updraftplus/[domain]` (e.g. `updraftplus/template.nethost.co`). Business/Pro — Cloudways built-in backups.
+
+> **Backup retention/cap gotcha (2026-07-20):** `nethost-backup.sh` originally had no retention — it wrote a new dated folder every day and never pruned, so daily backups accumulated and filled the B2 free-tier storage cap ~June 13, silently blocking ALL uploads for ~5 weeks (the 2 AM cron keeps running but `rclone sync` 403s, hidden by `--quiet`). Script now keeps the newest 14 dated folders ([vps-files/nethost-backup.sh](vps-files/nethost-backup.sh)). BUT the rclone remote is **S3-compatible (`type=s3`)** against Backblaze, so rclone deletes only create B2 *hidden versions* that still count toward billed storage; real reclamation requires a **B2 bucket Lifecycle Rule "Keep only the last version of the file"** (console) plus raising the **Caps & Alerts → Storage Cap** to the 10 GB free ceiling (real data is only ~6.3 GB). **Resolved 2026-07-20:** lifecycle rule confirmed already set (`daysFromHidingToDeleting:1`); a one-time B2-native-API pass deleted 308 stale versions (~3.5 GB reclaimed) so uploads unblocked immediately instead of waiting on B2's ~daily lifecycle run; verified working (fresh `2026-07-20/` folder uploaded, retention aged out the oldest). Steady state ~6.9 GB current data → stays in the 10 GB free tier ($0). The reclaim reused the rclone key's own B2 creds (turned out to have full caps incl. `writeBucketLifecycleRules`).
+>
+> **Update 2026-07-24 — switched to database-only:** the cap recurred. Root cause was two-fold: (1) the per-site file tarballs were sweeping in UpdraftPlus's own `wp-content/updraft` archives — **backing up backups**, ~620MB/run, which ballooned each daily from ~380MB to ~980MB; and (2) 14 daily full backups of 6 template sites simply exceed the 10GB free tier. Since there is still **no client data** and site files are already covered by UpdraftPlus (weekly) + Hostinger weekly full-VM backups, `nethost-backup.sh` was switched to **database-only** (`mysqldump --all-databases` only; retention 7). Each daily run is now **~6MB**; whole bucket ~200MB (incl. the `updraftplus/` prefix). NOTE: also had to strip old bloated dated folders + reclaim versions to get back under the (evidently low / laggy) cap. **When real client data arrives, re-add per-site file backups** — git history of `vps-files/nethost-backup.sh` has the `tar` version with `--exclude` patterns for `updraft`/`cache`/`wflogs`/`*.log` so you never re-introduce the backup-of-backups bloat.
 
 ---
 
@@ -203,7 +211,7 @@ app/src/
 | Function | Purpose |
 |---|---|
 | `create-subscription` | Creates Stripe customer + subscription, returns clientSecret for PaymentElement confirmation. Supports test mode via `testMode` boolean in request body (uses `STRIPE_SECRET_KEY_TEST` and `STRIPE_PRICE_*_TEST` secrets). |
-| `stripe-webhook` | Handles Stripe subscription lifecycle events (payment_succeeded, payment_failed, subscription.deleted, subscription.updated) → updates `orders.status`. Uses HMAC SHA-256 signature verification (no Stripe SDK). Uses service-role key for DB updates. **Must be deployed with `--no-verify-jwt`** (Stripe webhooks don't include Supabase JWTs). Registered in Stripe as NETHOST-SignUp webhook pointing to `https://qsvwdemwttwrqgvsonql.supabase.co/functions/v1/stripe-webhook`. |
+| `stripe-webhook` | Handles Stripe subscription lifecycle events (payment_succeeded, payment_failed, subscription.deleted, subscription.updated) → updates `orders.status`. Uses HMAC SHA-256 signature verification (no Stripe SDK). Uses service-role key for DB updates. **Must be deployed with `--no-verify-jwt`** (Stripe webhooks don't include Supabase JWTs). Registered in Stripe as NETHOST-SignUp webhook (**Live mode**) pointing to `https://qsvwdemwttwrqgvsonql.supabase.co/functions/v1/stripe-webhook`. GOTCHA: Stripe keeps **separate Test-mode and Live-mode webhook lists** — a stale *test-mode* endpoint pointing at an old, Supabase project (`ptxrxekttwxpmmylccal` = Permiana, a separate app) kept generating "webhook delivery issues [test mode]" emails; removed 2026-07-20. When auditing Stripe webhooks check BOTH lists: `dashboard.stripe.com/webhooks` (live) and `dashboard.stripe.com/test/webhooks` (test). |
 | `domain-check` | Checks Namecheap availability + price via PHP proxy |
 | `domain-register` | Registers domain via Namecheap PHP proxy |
 | `provision-hosting` | Routes to CyberPanel (Starter) or Cloudways (Business/Pro); sets DNS via Namecheap; returns `{ wpAdminUrl, username, password, email, serverIp }`. **Before provisioning:** uses service-role key to insert an `orders` row with `status: 'provisioning'` (reuses existing provisioning row on retry). **After success:** updates row with credentials and `status: 'active'`. Step7 no longer does its own DB insert. Cloudways path: authenticates with `CLOUDWAYS_ACCESS_TOKEN` as a Bearer token (no OAuth exchange), creates app via POST /app, waits 30s, then polls GET /server every 10s (up to 12×) to find app + credentials in server.apps array. Credentials may be at top-level app fields (sys_user/sys_password) not nested under creds[]. |
@@ -237,8 +245,13 @@ ssh -i ~/.ssh/nethost_vps root@76.13.118.227
 # or via alias (configured in ~/.ssh/config)
 ssh nethost-vps
 
-# WP-CLI — always use this exact path on the VPS
+# WP-CLI — base path on the VPS
 /usr/bin/wp --allow-root --path=/home/template.nethost.co/public_html
+
+# GOTCHA: the system `php` CLI (8.1 at /usr/bin/php) has NO mysqli extension, so any
+# DB-touching WP-CLI command (plugin list/update, option get/patch, eval-file, search-replace)
+# errors with "missing the MySQL extension". Prefix with lsphp 8.3 (has mysqli):
+/usr/local/lsws/lsphp83/bin/php /usr/bin/wp --allow-root --path=/home/<domain>/public_html <cmd>
 
 # Deploy a file
 scp -i ~/.ssh/nethost_vps <local-file> root@76.13.118.227:/tmp/<file>
@@ -261,13 +274,17 @@ All template sites use `admin` / `NHtemplate25!` (internal use — change via WP
 Provisioning maps are in `vps-files/provision-cyberpanel.php` → `$templateMap`.
 
 ### Page IDs
-| Page | ID | Notes |
-|---|---|---|
-| Home | 165 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
-| About | 168 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
-| Services | 142 | Full rebuild — hero / 3 cards / split / process / stats / CTA (`vps-files/build-services.php`) |
-| Contact | 169 | Re-imported via Astra Balor (2025-05-24); edit copy directly in Elementor |
-| Privacy Policy | 3 | Draft |
+The site was rebuilt after the earlier Elementor-corruption incident, so all the old IDs (18/137/138/142/165/168/169) are gone. Current published page set (verified 2026-07-20), all built in Elementor except Blog (a posts-listing page, no Elementor data — correct):
+| Page | ID | Slug | Notes |
+|---|---|---|---|
+| Home | 762 | `home` | Front page (`page_on_front`); ~99 KB Elementor |
+| About | 764 | `about` | Elementor |
+| Services | 765 | `services` | Elementor; renamed from `services-2` after trashing old duplicate 142 (2026-07-20) |
+| Blog | 766 | `blog` | Posts-listing page — intentionally no Elementor data |
+| Contact | 767 | `contact` | Elementor |
+| Privacy Policy | 3 | `privacy-policy` | Draft |
+
+Nav: active menu is term 9 "Menu" (primary/mobile/footer locations), linking Home→762, About→764, Services→765, Blog→766, Contact→767. An orphaned "Primary Menu" (term 3, no location assigned, not displayed) still exists. Note: `nav_menu_item` posts (e.g. ID 18 = the Blog menu item) show as published title-less posts — do NOT mistake them for empty pages.
 
 ### Media Library (Balor Template Images)
 Base URL: `http://template.nethost.co/wp-content/uploads/2022/05/`
@@ -427,6 +444,8 @@ create table orders (
 ```
 RLS: users can SELECT and INSERT their own rows. `stripe-webhook` and `provision-hosting` use service-role key for UPDATE/INSERT (bypasses RLS). Valid status values: `'provisioning'` | `'active'` | `'past_due'` | `'cancelled'`. All webhook status writes use `'cancelled'` (double l) and `'past_due'` — must match Dashboard checks.
 
+> **Supabase Data API note:** For any new tables added after Oct 30, 2026, include `GRANT SELECT, INSERT, UPDATE, DELETE ON public.table_name TO anon, authenticated;` in the migration SQL — Supabase will no longer auto-expose public schema tables to the Data API on existing projects after that date.
+
 ### Provisioning Tasks (Step7Provisioning.jsx)
 ```
 Task 0: Registering domain       → calls domain-register Edge Function (skipped for 'connect' domains)
@@ -453,6 +472,42 @@ Both variants show a 48-hour propagation notice.
 - PHP proxy CORS restricted to `https://app.nethost.co` (not wildcard)
 - `provision-hosting` inserts `status: 'provisioning'` order row before calling infrastructure APIs — ensures payment is traceable if provisioning fails mid-flight
 
+### WordPress Hardening (Template Sites)
+
+**MU Plugin** — deployed to all 4 VPS template sites and all 3 Cloudways template apps at:
+`wp-content/mu-plugins/nethost-security.php`
+Sets security headers via `send_headers` hook (PHP-level — required because OLS ignores mod_headers in .htaccess and Cloudways uses Nginx), removes REST API user enumeration endpoints, redirects author archive pages, strips WP generator tag, sets `DISALLOW_FILE_EDIT`.
+
+**VPS .htaccess** — all 4 VPS template sites have OLS-compatible security rules using `RewriteRule [F,L]` (not `Files`/`FilesMatch` — those are ignored by OpenLiteSpeed):
+- Blocks: `xmlrpc.php`, `readme.html`, `license.txt`, `.user.ini`, `?author=` enumeration
+- `.user.ini` additionally blocked via OLS vhost context block in `/usr/local/lsws/conf/vhosts/[domain]/vhost.conf` (RewriteRule can't match dotfiles in OLS)
+
+**Cloudways apps** — `readme.html` and `license.txt` deleted from all 3 apps' `/public_html/` (Nginx ignores .htaccess deny rules; file deletion is the only option). WP admin username on all 3 is `nhadmin`.
+
+**Cloudflare Snippet** — `security_headers` snippet active on nethost.co (free-tier alternative to Transform Rules); sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `X-XSS-Protection`, `Permissions-Policy` on all responses.
+
+**Wordfence** — installed on all 4 VPS template sites. `php-ai-client` false positives suppressed via `scan_exclude_paths` in `wp_wfconfig` table (WP-CLI: `wp option patch insert wp_wfconfig scan_exclude_paths "wp-includes/php-ai-client/"`).
+
+**api.nethost.co** — `/home/api.nethost.co/public_html/.htaccess` blocks direct access to `nethost-secrets.php` and sets security headers. The legitimate secrets file remains at `/home/api.nethost.co/nethost-secrets.php` (outside webroot).
+
+### VPS / Host-Level Hardening (2026-07-20)
+
+The CyberPanel VPS (Hostinger KVM, VM id `1566822`, `76.13.118.227`) was fully firewalled + hardened after finding it wide open (no firewall, root+password SSH, public admin consoles):
+
+- **SSH is key-only:** `PasswordAuthentication no` + `PermitRootLogin prohibit-password` via `/etc/ssh/sshd_config.d/00-nethost-hardening.conf`. It's named `00-` so it sorts before Ubuntu's `50-cloud-init.conf`, which was forcing `PasswordAuthentication yes` (also patched to `no`). Only the `~/.ssh/nethost_vps` key logs in now — there is no password fallback.
+- **fail2ban** active (sshd jail; `bantime 1h`, `maxretry 5`), config `/etc/fail2ban/jail.local`. `ignoreip` includes the admin IP `71.199.212.179` so admin activity can't self-ban. NOTE: don't hammer port 22 with `nc`/probes from a non-ignored IP or fail2ban may ban it.
+- **Disabled services:** CyberPanel WebSSH (`fastapi_ssh_server`, was a public **root web terminal** on `:8888`) and FTP (`pure-ftpd-mysql`, `:21`) — stopped + disabled/masked. Use SFTP-over-SSH instead of FTP.
+- **Hostinger cloud firewall** `nethost-vps` (id `331984`) attached to the VM (default-drop; managed via Hostinger API/console, not host iptables):
+  - Public (any): 80, 443 (TCP+UDP), 25, 465, 587, 110, 143, 993, 995, 53 (TCP+UDP), 22, ICMP.
+  - **Admin, restricted to `71.199.212.179`:** 8090 (CyberPanel), 7080 (OLS WebAdmin).
+  - Everything else dropped (e.g. 4190 ManageSieve). MySQL/Redis/memcached were already localhost-only.
+  - **Admin IP is residential/dynamic** — if it changes, edit the 8090/7080 rules in Hostinger console (VPS → Firewall). Can't be permanently locked out: SSH (22) stays open to any (protected by key-only + fail2ban).
+  - **GOTCHA:** after creating/editing rules you must **activate AND sync** the firewall to the VM (`is_synced` starts false; activation alone isn't enough). During a sync the box's networking is rewritten and connections briefly blip (SSH/HTTP can drop for ~seconds) — wait for it to settle before concluding a rule is wrong.
+- **PHP is NOT auto-patched (2026-10-21 lesson):** unattended-upgrades only covers Ubuntu repos. CyberPanel's `lsphp*` packages come from the LiteSpeed repo, so they sat on 8.3.30 while a critical PHP CVE was being exploited. **Check monthly** and patch with: `apt-get update && apt list --upgradable | grep lsphp`, then `apt-get install -y --only-upgrade $(apt list --upgradable 2>/dev/null | grep -oE "^lsphp[^/]+")` and `/usr/local/lsws/bin/lswsctrl restart`. (Passing every installed `lsphp*` name in one install command silently fails; use the upgradable list.) Patched 2026-10-21 → lsphp83 8.3.36, lsphp82 8.2.35; also installed 12 pending Ubuntu security updates.
+- **All vhosts on lsphp83 (2026-10-21):** `api.nethost.co` moved from lsphp81 (EOL) and `panel.nethost.co` from lsphp80 (EOL) by editing `extprocessor ... path` in `/usr/local/lsws/conf/vhosts/<domain>/vhost.conf` (backups: `vhost.conf.bak-2026-10-21`). lsphp80/81 are still installed but unused; do not point new sites at them.
+- **Cloudways template apps run PHP 8.2** (per-app: Application Settings → PHP Settings). Cloudways patches PHP itself, but **8.2 reaches end of security support 2026-12-31**: switch the 3 template apps to 8.3 before then (the same plugins already run on 8.3 on the VPS).
+- Monarx malware agent active. Verified end-state from external nodes: public ports reachable, 8090/7080 blocked except from the admin IP, 4190 blocked.
+
 ---
 
 ## Do's and Don'ts
@@ -468,7 +523,7 @@ Both variants show a 48-hour propagation notice.
 - Deploy PHP changes via SCP with SSH key: `scp -i ~/.ssh/nethost_vps <file> root@76.13.118.227:/home/api.nethost.co/public_html/<file>`
 - When building Elementor pages programmatically, keep all HTML strings on single lines — no literal newlines
 - Store new VPS-side PHP scripts in `vps-files/` locally so they're version-controlled
-- Use `/usr/bin/wp --allow-root` as the WP-CLI path on the VPS (not `/usr/local/bin/wp`)
+- Use `/usr/bin/wp --allow-root` as the WP-CLI path on the VPS (not `/usr/local/bin/wp`); for any DB-touching command prefix with lsphp 8.3 — `/usr/local/lsws/lsphp83/bin/php /usr/bin/wp ...` — because the system php CLI lacks mysqli
 
 ### Don't
 - Don't use dynamic Tailwind class construction (`bg-${color}-500`) — Tailwind purges these
@@ -492,13 +547,13 @@ Both variants show a 48-hour propagation notice.
 - [ ] Dedicated IP as a Pro differentiator — requires Cloudways provisioning changes; not yet implemented
 - [ ] Automated site cleanup on cancellation — delete from CyberPanel/Cloudways after billing period ends; currently manual
 - [ ] Cloudways multi-server strategy — all Business/Pro customers share one server; need plan for when to add a second
-- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID` in Supabase Edge Function secrets once a Cloudways template app is built (Business/Pro equivalent of the CyberPanel template clone)
-- [ ] Email SMTP for Starter sites — options: managed Resend auto-config via WP-CLI during provisioning, or customer self-service
-- [ ] UpdraftPlus configured on template site — customers inherit backup plugin pre-installed
+- [x] Set `CLOUDWAYS_TEMPLATE_APP_ID` in Supabase Edge Function secrets — superseded by per-template IDs below
+- [x] Email SMTP for Starter sites — Postfix on CyberPanel VPS configured to relay all outgoing mail through Resend (`smtp.resend.com:587`, from `hello@nethost.co`); credentials in `/etc/postfix/sasl_passwd`; applies automatically to all VPS-hosted WP sites with no per-site config needed
+- [x] UpdraftPlus configured on all 4 VPS template sites — weekly backups to Backblaze B2 (`nethost-backups` bucket, S3-Compatible endpoint, path prefix `updraftplus/[domain]`)
 - [ ] Template site: swap placeholder split-section image on Services page with a generated/custom photo (see prompt in `vps-files/build-services.php` comments)
-- [ ] Set `CLOUDWAYS_TEMPLATE_APP_ID_BOLD`, `_MINIMAL`, `_CORPORATE` in Supabase secrets once Cloudways template apps are built (Business/Pro tier equivalent)
+- [x] Set `CLOUDWAYS_TEMPLATE_APP_ID_BOLD`, `_MINIMAL`, `_CORPORATE` in Supabase secrets — confirmed set 2026-05-24
 - [x] All 4 Starter template sites built and live on VPS
-- [ ] **BROKEN: Home (ID 18) and Contact (ID 138) pages** — corrupted by `walk_update()` patch script. Home renders unstyled (flush-left); Contact still has Lorem ipsum. Fix: re-import both pages from Astra Starter Templates in WP admin, then write dedicated full-rebuild scripts for each (like `build-services.php`). Do NOT use the deprecated `update-template-pages.php`.
+- [x] ~~BROKEN: Home (ID 18) / Contact (ID 138) pages~~ — RESOLVED (2026-07-20): the template site was rebuilt with a fresh page set, so the corrupted old pages no longer exist. Current pages 762–767 verified healthy; trashed leftover duplicate Services (142) and moved the real Services (765) to the clean `/services` slug. Old IDs 18/137/138/142/165/168/169 are obsolete (18 turned out to be a live `nav_menu_item`, not a page). See the updated Page IDs table.
 - [x] Services (ID 142) and About (ID 137) — fully rebuilt, working correctly
 - [x] Footer updated — widget areas 7 + 8 updated, copyright text cleaned
 - [x] MU plugin deployed
@@ -538,3 +593,8 @@ Both variants show a 48-hour propagation notice.
 - [x] Services page live at /services — 4 service categories (branding, web, marketing, AI/automation); linked from AdditionalServices on homepage; each service has full section with "What's Included" card
 - [x] SEO pass completed: per-page document.title for all routes; sitemap.xml updated with /services, /terms, /privacy; heading hierarchy verified (h1→h2→h3); all images have alt tags; index.html has full OG/Twitter/JSON-LD
 - [x] Security audit: no hardcoded secrets in frontend; PHP proxy CORS locked to app.nethost.co; RLS active; authenticated endpoints use JWT. Note: create-subscription and provision-hosting accept anon-key requests (by design — actual protection is Stripe payment + RLS). Recommendation: add Stripe subscription status check in provision-hosting before provisioning infrastructure.
+- [x] WordPress hardening: MU plugin deployed to all 4 VPS + 3 Cloudways template sites (security headers, REST API lockdown, author redirect, DISALLOW_FILE_EDIT); OLS-compatible .htaccess rules on VPS; readme.html + license.txt deleted from Cloudways apps; Cloudflare security_headers snippet live; Wordfence installed on VPS template sites; api.nethost.co webroot hardened
+- [x] Plugin vuln patch (2026-07): Elementor ≤4.1.3 (sensitive-data-exposure) + LatePoint ≤5.6.3 (unauth SQLi + priv-esc + IDOR; Patchstack/Cloudways alert). **Fully remediated across the whole fleet → Elementor 4.1.5, LatePoint 5.6.9.** All 4 VPS template sites patched via WP-CLI (template-minimal + template-corporate run LatePoint); all 3 Cloudways template apps (Corporate/Bold/Minimal) patched via WP admin. LatePoint file snapshots at /root/nethost-backups/plugin-snapshots/. markitang.com test app confirmed deleted; no client sites exist → no clone propagation. (WP-CLI DB ops on VPS require lsphp83 — system php CLI lacks mysqli.)
+- [x] VPS security hardening (2026-07-20): box was wide open (no firewall, root+password SSH, public CyberPanel 8090 / OLS 7080 / WebSSH 8888 / FTP 21). Fixed → SSH key-only + fail2ban, disabled WebSSH+FTP, Hostinger cloud firewall (id 331984) default-drop with admin panels locked to the admin IP. Verified from external nodes. Details under Security Notes → "VPS / Host-Level Hardening".
+- [x] Stripe stale test-mode webhook removed (2026-07-20): recurring "webhook delivery issues [test mode]" emails came from an orphaned **Test-mode** endpoint pointing to the **Permiana** Supabase project (`ptxrxekttwxpmmylccal`, a separate app), not NETHOST (`qsvwdemwttwrqgvsonql`). Deleted from Stripe's Test-mode webhook list; live `NETHOST-SignUp` endpoint unaffected. Root cause it recurred: Stripe's Test and Live webhook lists are separate and prior cleanups only touched Live.
+- [x] Backup pipeline fixed (2026-07-20): `nethost-backup.sh` had no retention → daily dated folders filled the B2 free-tier cap ~June 13, silently blocking all uploads for ~5 weeks. Added keep-newest-14 retention; confirmed B2 lifecycle rule (keep-only-last-version); reclaimed 308 stale versions (~3.5 GB) via B2 native API for immediate unblock; verified fresh backup uploads + retention aging. Steady state ~6.9 GB → free tier ($0). Details in the Backups gotcha note above.

@@ -65,9 +65,6 @@ export default function About({ onContactOpen }) {
               className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover shrink-0 ring-1 ring-white/[0.1]"
             />
             <div>
-              <span className="text-xs font-semibold uppercase tracking-widest text-cyan-500 mb-3 block">
-                Founder
-              </span>
               <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-2">
                 Gabriel Ibertis
               </h1>
