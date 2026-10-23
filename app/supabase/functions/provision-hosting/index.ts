@@ -190,37 +190,89 @@ async function provisionCyberPanel(domain: string, template = 'Bold') {
   return { ...data, serverIp: '76.13.118.227' };
 }
 
+// --- Payment verification ---
+const PLAN_PRICE_IDS: Record<string, string | undefined> = {
+  Starter:  Deno.env.get('STRIPE_PRICE_STARTER'),
+  Business: Deno.env.get('STRIPE_PRICE_BUSINESS'),
+  Pro:      Deno.env.get('STRIPE_PRICE_PRO'),
+};
+
+const deny = (status: number, error: string) =>
+  new Response(JSON.stringify({ error }), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+// Returns an error message, or null when the subscription is paid and valid for this order.
+async function verifyPayment(
+  svc: ReturnType<typeof createClient>,
+  userEmail: string,
+  plan: string,
+  domain: string,
+  subscriptionId: string | null | undefined,
+): Promise<string | null> {
+  const unpaid = 'No active subscription found. Please complete payment before launching your website.';
+  if (!subscriptionId) return unpaid;
+
+  const expectedPrice = PLAN_PRICE_IDS[plan];
+  if (!expectedPrice) return `Plan not available: ${plan}`;
+
+  // The first invoice can take a moment to settle after confirmPayment, so retry briefly
+  let sub;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(
+      `https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}?expand[]=customer&expand[]=latest_invoice`,
+      { headers: { 'Authorization': `Bearer ${Deno.env.get('STRIPE_SECRET_KEY')!}` } },
+    );
+    sub = await res.json();
+    if (!res.ok) return unpaid;
+    const paid = ['active', 'trialing'].includes(sub.status) || sub.latest_invoice?.status === 'paid';
+    if (paid) break;
+    if (sub.status !== 'incomplete' || attempt === 4) return unpaid;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  if ((sub.customer?.email ?? '').toLowerCase() !== userEmail.toLowerCase()) return unpaid;
+  if (sub.items?.data?.[0]?.price?.id !== expectedPrice) return 'Your payment does not match the selected plan.';
+
+  // One subscription pays for one site
+  const { data: used } = await svc
+    .from('orders')
+    .select('id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .neq('domain', domain)
+    .limit(1);
+  if (used?.length) return 'This payment is already in use for another website.';
+
+  return null;
+}
+
 // --- Main handler ---
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { plan, domain, siteName, template, userId, stripeCustomerId, stripeSubscriptionId } = await req.json();
+    const { plan, domain, siteName, template, stripeCustomerId, stripeSubscriptionId } = await req.json();
     if (!plan || !domain) {
       return new Response(JSON.stringify({ error: 'plan and domain required' }), { status: 400, headers: CORS });
     }
 
-    // Verify the Stripe subscription is in a payable state before provisioning
-    if (stripeSubscriptionId) {
-      const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')!;
-      const subRes = await fetch(
-        `https://api.stripe.com/v1/subscriptions/${stripeSubscriptionId}`,
-        { headers: { 'Authorization': `Bearer ${stripeKey}` } },
-      );
-      const sub = await subRes.json();
-      if (!['active', 'trialing', 'incomplete'].includes(sub.status)) {
-        return new Response(
-          JSON.stringify({ error: 'No active subscription found. Please complete payment before provisioning.' }),
-          { status: 402, headers: CORS },
-        );
-      }
-    }
+    // Identify the caller from their JWT (never trust a userId from the request body)
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } },
+    );
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) return deny(401, 'Please sign in before launching your website.');
+    const userId = user.id;
 
     // Service-role client — used for order tracking; bypasses RLS
     const svcSupabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+
+    // Payment gate: a paid subscription for this plan, owned by this user, not already used for another site
+    const payError = await verifyPayment(svcSupabase, user.email ?? '', plan, domain, stripeSubscriptionId);
+    if (payError) return deny(402, payError);
 
     // Ensure a 'provisioning' order row exists immediately so the user's payment is always
     // traceable even if provisioning fails mid-flight (e.g. browser closes, server error).

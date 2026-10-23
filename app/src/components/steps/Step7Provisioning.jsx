@@ -70,7 +70,6 @@ export default function Step7Provisioning() {
             email:      `hello@${data.domain}`,
           };
         } else if (!completedTasksRef.current.has(1)) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
           const [provisionResult] = await Promise.all([
             supabase.functions.invoke('provision-hosting', {
               body: {
@@ -78,7 +77,6 @@ export default function Step7Provisioning() {
                 domain:                 data.domain,
                 siteName:               data.identity?.name || data.domain,
                 template:               data.template       ?? 'Bold',
-                userId:                 currentUser?.id      ?? null,
                 stripeCustomerId:       data.stripeCustomerId      ?? null,
                 stripeSubscriptionId:   data.stripeSubscriptionId  ?? null,
               },
