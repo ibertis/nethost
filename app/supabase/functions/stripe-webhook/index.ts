@@ -1,15 +1,27 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-async function verifySignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {
-  const pairs = sigHeader.split(',').reduce((acc, part) => {
-    const [k, v] = part.split('=');
-    acc[k.trim()] = v;
-    return acc;
-  }, {} as Record<string, string>);
+const TOLERANCE_SECONDS = 300; // Stripe's default: reject events signed more than 5 minutes ago (replays)
 
-  const { t, v1 } = pairs;
-  if (!t || !v1) return false;
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function verifySignature(payload: string, sigHeader: string, secret: string): Promise<boolean> {
+  let t = '';
+  const v1s: string[] = []; // Stripe may send several v1 signatures during secret rotation
+  for (const part of sigHeader.split(',')) {
+    const [k, v] = part.split('=');
+    if (k?.trim() === 't') t = v ?? '';
+    if (k?.trim() === 'v1' && v) v1s.push(v);
+  }
+  if (!t || !v1s.length) return false;
+
+  const ts = Number(t);
+  if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > TOLERANCE_SECONDS) return false;
 
   const key = await crypto.subtle.importKey(
     'raw',
@@ -20,7 +32,7 @@ async function verifySignature(payload: string, sigHeader: string, secret: strin
   );
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${t}.${payload}`));
   const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return v1 === expected;
+  return v1s.some((v1) => timingSafeEqual(v1, expected));
 }
 
 serve(async (req) => {
