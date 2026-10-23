@@ -9,7 +9,22 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { name, email, phone, message } = await req.json();
+    const body = await req.json();
+    const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+    const esc = (v: string) =>
+      v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const rawName = clean(body.name, 100).replace(/[\r\n]/g, ' ');
+    const rawEmail = clean(body.email, 254);
+    const rawPhone = clean(body.phone, 40);
+    const rawMessage = clean(body.message, 5000);
+    if (rawEmail && !/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(rawEmail)) {
+      return new Response(
+        JSON.stringify({ error: 'Please enter a valid email address' }),
+        { status: 400, headers: { ...CORS, 'Content-Type': 'application/json' } },
+      );
+    }
+    // Everything below is HTML-escaped; the email never renders visitor-supplied markup
+    const [name, email, phone, message] = [rawName, rawEmail, rawPhone.replace(/[^0-9+()\-.\s]/g, ''), rawMessage].map(esc);
     if (!name || !email || !message) {
       return new Response(
         JSON.stringify({ error: 'name, email, and message are required' }),
@@ -98,7 +113,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: 'NETHOST <hello@nethost.co>',
         to: ['hello@nethost.co'],
-        reply_to: email,
+        reply_to: rawEmail,
         subject: 'Website Inquiry Received: NETHOST.co',
         html,
       }),
