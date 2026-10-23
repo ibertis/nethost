@@ -19,13 +19,14 @@ create policy "Users see own orders"
   on orders for select
   using (auth.uid() = user_id);
 
-create policy "Users insert own orders"
-  on orders for insert
-  with check (auth.uid() = user_id);
-
--- Data API grants (required for tables created after 2026-10-30).
--- Customers read (and may insert) their own orders; RLS enforces ownership.
--- The Stripe webhook, provisioning, and cancellation Edge Functions write with
--- service_role, which bypasses RLS but still needs table grants.
-grant select, insert on orders to authenticated;
+-- Orders are written only by Edge Functions (service_role). Customers can only read their own rows.
+-- (A user INSERT policy existed until 2026-10-23; it let users forge stripe_customer_id/subscription values.)
+drop policy if exists "Users insert own orders" on orders;
+revoke all on orders from anon;
+revoke all on orders from authenticated;
+grant select on orders to authenticated;
 grant select, insert, update, delete on orders to service_role;
+
+-- One Stripe subscription pays for exactly one site
+create unique index if not exists orders_stripe_subscription_id_key
+  on orders (stripe_subscription_id) where stripe_subscription_id is not null;

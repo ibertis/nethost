@@ -46,7 +46,14 @@ export default function Step7Provisioning() {
         const shouldRegisterDomain = data.domainOption === 'register' && !TEST_MODE;
         if (shouldRegisterDomain && !completedTasksRef.current.has(0)) {
           const [registerResult] = await Promise.all([
-            supabase.functions.invoke('domain-register', { body: { domain: data.domain, price: data.domainPrice } }),
+            supabase.functions.invoke('domain-register', {
+              body: {
+                domain:               data.domain,
+                plan:                 data.plan,
+                stripeCustomerId:     data.stripeCustomerId     ?? null,
+                stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+              },
+            }),
             delay(MIN_TASK_MS),
           ]);
           if (registerResult.error || registerResult.data?.error) {
@@ -115,18 +122,10 @@ export default function Step7Provisioning() {
         // Order row is written by provision-hosting using service-role key.
         // Fire confirmation email (non-blocking).
         if (!TEST_MODE) {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            supabase.functions.invoke('send-order-confirmation', {
-              body: {
-                to:         user.email,
-                domain:     provisionedCredentials.domain,
-                plan:       data.plan,
-                wpAdminUrl: provisionedCredentials.wpAdminUrl,
-                username:   provisionedCredentials.username,
-              },
-            });
-          }
+          // The function looks up the order and recipient server-side from the caller's JWT
+          supabase.functions.invoke('send-order-confirmation', {
+            body: { domain: provisionedCredentials.domain },
+          });
         }
 
         await delay(600);

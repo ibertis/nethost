@@ -270,7 +270,7 @@ scp -i ~/.ssh/nethost_vps <local-file> root@76.13.118.227:/tmp/<file>
 | Bold | `template-corporate.nethost.co` | David Williams | Elementor, WPForms Lite |
 | Blank | `template-blank.nethost.co` | Astra + Elementor only | Elementor |
 
-All template sites use `admin` / `NHtemplate25!` (internal use — change via WP admin).
+All template sites use the `admin` account; the password is kept in the owner's password manager (rotated 2026-10-23 after it was found in this public repo). Never write credentials in this file.
 Provisioning maps are in `vps-files/provision-cyberpanel.php` → `$templateMap`.
 
 ### Page IDs

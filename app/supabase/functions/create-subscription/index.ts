@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getCaller } from '../_shared/payment.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +46,13 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { plan, email, testMode } = await req.json();
+    // The Stripe customer is always the signed-in user's own email (never one from the request body)
+    const user = await getCaller(req);
+    if (!user?.email) {
+      return new Response(JSON.stringify({ error: 'Please sign in to continue.' }), { status: 401, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    }
+    const email = user.email;
+    const { plan, testMode } = await req.json();
 
     const PRICE_IDS = testMode ? TEST_PRICE_IDS : LIVE_PRICE_IDS;
 
@@ -53,7 +60,6 @@ serve(async (req) => {
 
     const priceId = PRICE_IDS[plan];
     if (!priceId) return err(`Price ID not configured for plan: ${plan}`);
-    if (!email)   return err('Email required');
 
     const secretKey = testMode
       ? (Deno.env.get('STRIPE_SECRET_KEY_TEST') ?? Deno.env.get('STRIPE_SECRET_KEY')!)

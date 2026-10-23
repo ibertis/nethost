@@ -1,11 +1,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { getCaller, serviceClient, normalizeDomain } from '../_shared/payment.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function buildHtml(plan: string, domain: string, wpAdminUrl: string, username: string): string {
+const esc = (v: string) =>
+  v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function buildHtml(rawPlan: string, rawDomain: string, rawWpAdminUrl: string, rawUsername: string): string {
+  const [plan, domain, wpAdminUrl, username] = [rawPlan, rawDomain, rawWpAdminUrl, rawUsername].map(esc);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,10 +132,29 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
-    const { to, domain, plan, wpAdminUrl, username } = await req.json();
-    if (!to || !domain) {
-      return new Response(JSON.stringify({ error: 'to and domain required' }), { status: 400, headers: CORS });
-    }
+    // Recipient and order details come from the caller's own order, never from the request body
+    const user = await getCaller(req);
+    if (!user?.email) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: CORS });
+
+    const { domain: rawDomain } = await req.json();
+    const requested = normalizeDomain(rawDomain);
+    if (!requested) return new Response(JSON.stringify({ error: 'domain required' }), { status: 400, headers: CORS });
+
+    const { data: order } = await serviceClient()
+      .from('orders')
+      .select('domain, plan, wp_admin_url, username')
+      .eq('user_id', user.id)
+      .eq('domain', requested)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!order) return new Response(JSON.stringify({ error: 'Order not found' }), { status: 404, headers: CORS });
+
+    const to = user.email;
+    const { domain, plan } = order;
+    const wpAdminUrl = order.wp_admin_url;
+    const username = order.username;
 
     const apiKey = Deno.env.get('RESEND_API_KEY')!;
 
