@@ -215,10 +215,13 @@ export default function Login() {
           {mode !== 'confirm' && (
             <div className="mt-5 text-center text-sm text-slate-500">
               {mode === 'login' ? (
-                <>Don&apos;t have an account?{' '}
-                  <button onClick={() => switchMode('signup')} className="text-cyan-400 hover:text-cyan-300 font-medium transition">
-                    Sign up
-                  </button>
+                // New sign-ups are paused (also disabled in Supabase Auth settings).
+                // To reopen: restore the "Sign up" button below and re-enable
+                // "Allow new users to sign up" in Supabase → Authentication → Sign In / Providers.
+                <>We&apos;re not accepting new accounts right now. Questions?{' '}
+                  <a href="mailto:hello@nethost.co" className="text-cyan-400 hover:text-cyan-300 font-medium transition">
+                    hello@nethost.co
+                  </a>
                 </>
               ) : (
                 <button onClick={() => switchMode('login')} className="text-cyan-400 hover:text-cyan-300 font-medium transition">
